@@ -28,7 +28,9 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.example.algorithmssimulationapp.search.bfsStart
+import com.example.algorithmssimulationapp.search.BFSResultScreen
+import com.example.algorithmssimulationapp.search.dfsStart
+import com.example.algorithmssimulationapp.sort.QuickSortStepScreen
 import com.example.algorithmssimulationapp.sort.showMergeSort
 
 class MainActivity : ComponentActivity() {
@@ -55,8 +57,14 @@ class MainActivity : ComponentActivity() {
                 composable("search") {
                     UIChoose(navHostController)
                 }
+                composable("dfs") {
+                    dfsStart(navHostController)
+                }
                 composable("bfs") {
-                    bfsStart(navHostController)
+                    BFSResultScreen(navHostController)
+                }
+                composable("quickSort") {
+                    QuickSortStepScreen(navHostController)
                 }
             }
         }
@@ -80,7 +88,7 @@ class MainActivity : ComponentActivity() {
             }
             Button(
                 onClick = {
-                    navHostController.navigate("sort")
+                    navHostController.navigate("quickSort")
                 }
             ) {
                 Text("Quick Sort")

@@ -1,152 +1,266 @@
 package com.example.algorithmssimulationapp.search
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
-import androidx.compose.material3.Button
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Text
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import java.util.*
 
-// Dữ liệu toàn cục của đồ thị
-val nodePositions = listOf(
-    Offset(200f, 200f),  // Node 1
-    Offset(100f, 400f),  // Node 2
-    Offset(300f, 400f),  // Node 3
-    Offset(50f, 600f),   // Node 4
-    Offset(350f, 600f),  // Node 5
-    Offset(500f, 400f),  // Node 6
-)
+class BFSAlgorithm {
+    private val adj = mutableMapOf<Int, MutableList<Int>>()
 
-val edges = listOf(
-    1 to 2,
-    1 to 3,
-    2 to 4,
-    3 to 5,
-    1 to 6
-)
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun bfsStart(navHostController: NavHostController) {
-    val result = remember { mutableStateOf("") }
-
-    // Tạo ma trận từ danh sách cạnh
-    val graphMatrix = createGraphMatrixFromEdges(edges, 6)
-
-    Column {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Color.Gray)
-                .padding(20.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Button(onClick = { navHostController.popBackStack() }) {
-                Text("Back")
-            }
-            Text("BFS", fontSize = 30.sp, fontWeight = FontWeight.Bold)
-        }
-
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 26.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text("Biểu diễn đồ thị:", fontSize = 20.sp)
-            GraphVisualizer()
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Text("Kết quả BFS:", fontSize = 20.sp)
-
-            LaunchedEffect(Unit) {
-                val visited = BooleanArray(7) // 1..6
-                val output = bfsMatrix(start = 1, graph = graphMatrix, visited = visited)
-                result.value = output.joinToString(" → ")
-            }
-
-            Text(text = result.value, fontSize = 18.sp, color = Color.Blue)
-        }
+    fun addEdge(u: Int, v: Int) {
+        adj.getOrPut(u) { mutableListOf() }.add(v)
+        adj.getOrPut(v) { mutableListOf() }.add(u)
     }
-}
 
-fun createGraphMatrixFromEdges(edges: List<Pair<Int, Int>>, size: Int): Array<IntArray> {
-    val graph = Array(size + 1) { IntArray(size + 1) } // 1-based index
-    for ((u, v) in edges) {
-        graph[u][v] = 1
-        graph[v][u] = 1 // undirected
-    }
-    return graph
-}
+    fun bfs(start: Int): List<Int> {
+        val visited = mutableSetOf<Int>()
+        val queue: Queue<Int> = LinkedList()
+        val result = mutableListOf<Int>()
 
+        queue.offer(start)
+        visited.add(start)
 
-fun bfsMatrix(start: Int, graph: Array<IntArray>, visited: BooleanArray): List<Int> {
-    val result = mutableListOf<Int>()
-    val queue = ArrayDeque<Int>()
-    queue.add(start)
-    visited[start] = true
+        while (queue.isNotEmpty()) {
+            val current = queue.poll()
+            result.add(current)
 
-    while (queue.isNotEmpty()) {
-        val current = queue.removeFirst()
-        result.add(current)
-
-        for (i in graph.indices) {
-            if (graph[current][i] == 1 && !visited[i]) {
-                queue.add(i)
-                visited[i] = true
-            }
-            println(result)
-        }
-    }
-    return result
-}
-
-
-@Composable
-fun GraphVisualizer() {
-    val radius = 40f
-
-    Canvas(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        // Vẽ cạnh
-        for ((from, to) in edges) {
-            val start = nodePositions[from - 1]
-            val end = nodePositions[to - 1]
-            drawLine(
-                color = Color.Black,
-                start = start,
-                end = end,
-                strokeWidth = 4f
-            )
-        }
-
-        // Vẽ node
-        nodePositions.forEachIndexed { index, position ->
-            drawCircle(
-                color = Color.Cyan,
-                center = position,
-                radius = radius
-            )
-            drawContext.canvas.nativeCanvas.drawText(
-                (index + 1).toString(),
-                position.x,
-                position.y + 10f,
-                android.graphics.Paint().apply {
-                    textSize = 40f
-                    textAlign = android.graphics.Paint.Align.CENTER
+            adj[current]?.forEach { neighbor ->
+                if (neighbor !in visited) {
+                    queue.offer(neighbor)
+                    visited.add(neighbor)
                 }
-            )
+            }
+        }
+
+        return result
+    }
+
+    fun getAdjacencyList(): Map<Int, List<Int>> = adj.toMap()
+}
+
+@Composable
+fun BFSResultScreen(navController: NavHostController) {
+    val bfsAlgorithm = remember {
+        BFSAlgorithm().apply {
+            // Thêm các cạnh theo dữ liệu từ code C++
+            addEdge(1, 2)
+            addEdge(1, 3)
+            addEdge(1, 5)
+            addEdge(1, 10)
+            addEdge(2, 4)
+            addEdge(3, 6)
+            addEdge(3, 7)
+            addEdge(3, 9)
+            addEdge(6, 7)
+            addEdge(5, 8)
+            addEdge(8, 9)
+        }
+    }
+
+    val bfsResult = remember { bfsAlgorithm.bfs(1) }
+
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        item {
+            // Header
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+            ) {
+                Column(
+                    modifier = Modifier.padding(20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "BFS Algorithm Result",
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                    Text(
+                        text = "Breadth-First Search từ node 1",
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                    )
+                }
+            }
+        }
+
+        item {
+            // Input Graph
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+            ) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Text(
+                        text = "Input Graph (Adjacency List)",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.padding(bottom = 12.dp)
+                    )
+
+                    LazyColumn(
+                        modifier = Modifier.height(200.dp)
+                    ) {
+                        items(
+                            bfsAlgorithm.getAdjacencyList().toList()
+                                .sortedBy { it.first }) { (node, neighbors) ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 6.dp)
+                                    .background(
+                                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                                        RoundedCornerShape(8.dp)
+                                    )
+                                    .padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .clip(CircleShape)
+                                        .background(MaterialTheme.colorScheme.primary)
+                                        .border(
+                                            2.dp,
+                                            MaterialTheme.colorScheme.onPrimary,
+                                            CircleShape
+                                        ),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = node.toString(),
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 16.sp,
+                                        color = Color.White
+                                    )
+                                }
+
+                                Text(
+                                    text = " → ",
+                                    modifier = Modifier.padding(horizontal = 12.dp),
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+
+                                Text(
+                                    text = "[${neighbors.joinToString(", ")}]",
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        item {
+            // BFS Result
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        text = "Result",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                        modifier = Modifier.padding(bottom = 12.dp)
+                    )
+
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        bfsResult.chunked(5).forEach { chunk ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(
+                                    8.dp,
+                                    Alignment.CenterHorizontally
+                                )
+                            ) {
+                                chunk.forEach { node ->
+                                    Box(
+                                        modifier = Modifier
+                                            .size(40.dp)
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(MaterialTheme.colorScheme.primary)
+                                            .border(
+                                                1.dp,
+                                                MaterialTheme.colorScheme.onPrimary,
+                                                RoundedCornerShape(8.dp)
+                                            ),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = node.toString(),
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 16.sp,
+                                            color = Color.White
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    // Kết quả
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                        )
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text = "Thứ tự duyệt:",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = bfsResult.joinToString(" → "),
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+            }
         }
     }
 }
