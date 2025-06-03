@@ -6,6 +6,11 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -14,10 +19,17 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.text.isDigitsOnly
-import com.example.algorithmssimulationapp.sort.mergeSort
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import com.example.algorithmssimulationapp.search.bfsStart
 import com.example.algorithmssimulationapp.sort.showMergeSort
-import com.example.algorithmssimulationapp.ui.theme.AlgorithmsSimulationAppTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -25,17 +37,81 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             val list = mutableListOf(0)
-            AlgorithmsSimulationAppTheme{
-                addListFun(list)
+            val graph = mapOf(
+                1 to listOf(2, 3),
+                2 to listOf(4),
+                3 to listOf(5),
+                4 to listOf(),
+                5 to listOf()
+            )
+            val navHostController = rememberNavController()
+            NavHost(navHostController, startDestination = "home") {
+                composable("home") {
+                    UIChoose(navHostController)
+                }
+                composable("sort") {
+                    addListFun(list)
+                }
+                composable("search") {
+                    UIChoose(navHostController)
+                }
+                composable("bfs") {
+                    bfsStart(navHostController)
+                }
+            }
+        }
+    }
+}
+    @Composable
+    fun UIChoose(navHostController: NavHostController) {
+
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally
+        ) {
+            Spacer(modifier = Modifier.height(10.dp))
+            Text("Sort", fontWeight = FontWeight.Bold, fontSize = 30.sp)
+            Button(
+                onClick = {
+                    navHostController.navigate("sort")
+                }
+            ) {
+                Text("Merge Sort")
+            }
+            Button(
+                onClick = {
+                    navHostController.navigate("sort")
+                }
+            ) {
+                Text("Quick Sort")
+            }
+            Spacer(modifier = Modifier.height(10.dp))
+            Text("Search", fontWeight = FontWeight.Bold, fontSize = 30.sp)
+            Button(
+                onClick = {
+                    navHostController.navigate("bfs")
+                }
+            ) {
+                Text("BFS")
+            }
+            Button(
+                onClick = {
+                }
+            ) {
+                Text("DFS")
             }
         }
     }
 
     @Composable
-    fun addListFun(list: MutableList<Int>){
+    fun addListFun(list: MutableList<Int>) {
         var number by remember { mutableStateOf("") }
         var onSubmitted by remember { mutableStateOf(false) }
-        Column {
+        var selection by remember { mutableStateOf("") }
+        Column(
+            modifier = Modifier.fillMaxSize().padding(16.dp, vertical = 50.dp),
+            horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally
+        ) {
             Text("Mảng hiện tại: $list")
             Text("Nhập số cần thêm vào mảng: ")
             OutlinedTextField(
@@ -44,44 +120,66 @@ class MainActivity : ComponentActivity() {
                     number = it
                 }
             )
-            Button(
-                onClick = {
-                    if (number.isNotEmpty() && number.isDigitsOnly()) {
-                        list.add(number.toInt())
-                        number = ""
+            Column {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceAround
+                ) {
+                    Button(
+                        onClick = {
+                            if (number.isNotEmpty() && number.isDigitsOnly()) {
+                                list.add(number.toInt())
+                                number = ""
+                            } else {
+                                println("Invalid input")
+                            }
+                        }
+                    ) {
+                        Text("Add")
                     }
-                    else{
-                        println("Invalid input")
+                    Button(
+                        onClick = {
+                            list.clear()
+                            onSubmitted = false
+                            selection = ""
+                        }
+                    ) {
+                        Text("Clear")
                     }
                 }
-            ) {
-                Text("Add")
-            }
-            Button(
-                onClick = {
-                    list.clear()
-                    onSubmitted = false
+                Row {
+                    //Submit button
+                    Button(
+                        onClick = {
+                            onSubmitted = true
+                            selection = "merge"
+
+                            println("Mảng ban đầu: $list")
+                        }
+                    ) {
+                        Text("Merge Sort and show")
+                    }
+                    Button(
+                        onClick = {
+                            onSubmitted = true
+                            println("Mảng ban đầu: $list")
+                        }
+                    ) {
+                        Text("Quick Sort and show")
+                    }
                 }
-            ) {
-                Text("Clear")
-            }
-            //Submit button
-            Button(
-                onClick = {
-                    onSubmitted = true
-                    println("Mảng ban đầu: $list")
+
+                if (list.size > 1 && onSubmitted && selection == "merge") {
+                    showMergeSort(list)
                 }
-            ) {
-                Text("Submit")
-            }
-            if (list.size > 1 && onSubmitted) {
-                showMergeSort(list)
+                if (list.size > 1 && onSubmitted && selection == "quick") {
+                }
             }
         }
     }
-}
 
-@Composable
-fun showList(list: MutableList<Int>){
-    Text("Mảng sau khi sort: $list")
-}
+    @Composable
+    fun showList(list: MutableList<Int>) {
+        Text("Mảng sau khi sort: $list")
+        println("Mảng sau khi sort: $list")
+    }
