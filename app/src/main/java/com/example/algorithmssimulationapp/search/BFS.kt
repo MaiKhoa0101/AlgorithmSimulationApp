@@ -1,18 +1,19 @@
 package com.example.algorithmssimulationapp.search
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -52,13 +53,25 @@ class BFSAlgorithm {
     }
 
     fun getAdjacencyList(): Map<Int, List<Int>> = adj.toMap()
+
+    fun getEdges(): List<Pair<Int, Int>> {
+        val edges = mutableListOf<Pair<Int, Int>>()
+        adj.forEach { (node, neighbors) ->
+            neighbors.forEach { neighbor ->
+                if (node < neighbor) { // Avoid duplicate edges (undirected graph)
+                    edges.add(node to neighbor)
+                }
+            }
+        }
+        return edges.sortedBy { it.first }
+    }
 }
 
 @Composable
 fun BFSResultScreen(navController: NavHostController) {
     val bfsAlgorithm = remember {
         BFSAlgorithm().apply {
-            // Thêm các cạnh theo dữ liệu từ code C++
+            // Thêm các cạnh theo dữ liệu từ code 1
             addEdge(1, 2)
             addEdge(1, 3)
             addEdge(1, 5)
@@ -75,12 +88,25 @@ fun BFSResultScreen(navController: NavHostController) {
 
     val bfsResult = remember { bfsAlgorithm.bfs(1) }
 
+    // Vị trí mới – đã canh gần giống layout của hình 2
+    val nodePositions = listOf(
+        Offset(100f,  60f),   // 1 – trên cùng hơi lệch trái
+        Offset( 60f, 180f),   // 2
+        Offset(260f, 190f),   // 3
+        Offset( 20f, 300f),   // 4 – trái dưới
+        Offset(300f,  90f),   // 5 – giữa trên (nằm giữa 1 & 8)
+        Offset(220f, 340f),   // 6
+        Offset(320f, 340f),   // 7
+        Offset(380f, 190f),   // 8
+        Offset(460f, 320f),   // 9 – phải dưới
+        Offset(520f,  60f)    // 10 – trên cùng bên phải, nối ngang với 1
+    )
+
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
             .padding(12.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {
             // Header
@@ -108,159 +134,98 @@ fun BFSResultScreen(navController: NavHostController) {
         }
 
         item {
-            // Input Graph
+            // Input Graph Visualization
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
             ) {
                 Column(modifier = Modifier.padding(12.dp)) {
                     Text(
-                        text = "Input Graph (Adjacency List)",
+                        text = "Input Graph (Visualization)",
                         fontSize = 18.sp,
                         fontWeight = FontWeight.SemiBold,
                         modifier = Modifier.padding(bottom = 12.dp)
                     )
 
-                    LazyColumn(
-                        modifier = Modifier.height(200.dp)
-                    ) {
-                        items(
-                            bfsAlgorithm.getAdjacencyList().toList()
-                                .sortedBy { it.first }) { (node, neighbors) ->
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 6.dp)
-                                    .background(
-                                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                                        RoundedCornerShape(8.dp)
-                                    )
-                                    .padding(12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(36.dp)
-                                        .clip(CircleShape)
-                                        .background(MaterialTheme.colorScheme.primary)
-                                        .border(
-                                            2.dp,
-                                            MaterialTheme.colorScheme.onPrimary,
-                                            CircleShape
-                                        ),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = node.toString(),
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 16.sp,
-                                        color = Color.White
-                                    )
-                                }
-
-                                Text(
-                                    text = " → ",
-                                    modifier = Modifier.padding(horizontal = 12.dp),
-                                    fontSize = 18.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-
-                                Text(
-                                    text = "[${neighbors.joinToString(", ")}]",
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.Medium
-                                )
-                            }
-                        }
-                    }
+                    GraphVisualizer(
+                        edges = bfsAlgorithm.getEdges(),
+                        nodePositions = nodePositions,
+                        nodeCount = 10
+                    )
                 }
             }
         }
 
         item {
-            // BFS Result
+            // Kết quả
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                )
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                ) {
                     Text(
-                        text = "Result",
+                        text = "Thứ tự duyệt:",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = bfsResult.joinToString(" → "),
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer,
-                        modifier = Modifier.padding(bottom = 12.dp)
+                        color = MaterialTheme.colorScheme.primary,
                     )
-
-                    Column(
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        bfsResult.chunked(5).forEach { chunk ->
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(
-                                    8.dp,
-                                    Alignment.CenterHorizontally
-                                )
-                            ) {
-                                chunk.forEach { node ->
-                                    Box(
-                                        modifier = Modifier
-                                            .size(40.dp)
-                                            .clip(RoundedCornerShape(8.dp))
-                                            .background(MaterialTheme.colorScheme.primary)
-                                            .border(
-                                                1.dp,
-                                                MaterialTheme.colorScheme.onPrimary,
-                                                RoundedCornerShape(8.dp)
-                                            ),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text(
-                                            text = node.toString(),
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 16.sp,
-                                            color = Color.White
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(20.dp))
-
-                    // Kết quả
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
-                        )
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(16.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text(
-                                text = "Thứ tự duyệt:",
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = MaterialTheme.colorScheme.onSecondaryContainer
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = bfsResult.joinToString(" → "),
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary,
-                                textAlign = TextAlign.Center
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
                 }
             }
+
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+    }
+}
+
+@Composable
+fun GraphVisualizer(edges: List<Pair<Int, Int>>, nodePositions: List<Offset>, nodeCount: Int) {
+    val radius = 40f
+
+    Canvas(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(600.dp)
+            .padding(16.dp)
+    ) {
+        // Vẽ cạnh
+        for ((from, to) in edges) {
+            val start = nodePositions[from - 1]
+            val end = nodePositions[to - 1]
+            drawLine(
+                color = Color.Black,
+                start = start,
+                end = end,
+                strokeWidth = 4f
+            )
+        }
+
+        // Vẽ node
+        nodePositions.take(nodeCount).forEachIndexed { index, position ->
+            drawCircle(
+                color = Color.Cyan,
+                center = position,
+                radius = radius
+            )
+            drawContext.canvas.nativeCanvas.drawText(
+                (index + 1).toString(),
+                position.x,
+                position.y + 10f,
+                android.graphics.Paint().apply {
+                    textSize = 40f
+                    textAlign = android.graphics.Paint.Align.CENTER
+                }
+            )
         }
     }
 }

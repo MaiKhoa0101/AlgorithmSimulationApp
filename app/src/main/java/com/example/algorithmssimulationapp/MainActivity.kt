@@ -104,6 +104,7 @@ class MainActivity : ComponentActivity() {
             }
             Button(
                 onClick = {
+                    navHostController.navigate("dfs")
                 }
             ) {
                 Text("DFS")
