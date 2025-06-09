@@ -1,8 +1,6 @@
 package com.example.algorithmssimulationapp.search
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -10,16 +8,18 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
-import java.util.*
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.sin
+import java.util.LinkedList
+import java.util.Queue
 
 class BFSAlgorithm {
     private val adj = mutableMapOf<Int, MutableList<Int>>()
@@ -38,158 +38,192 @@ class BFSAlgorithm {
         visited.add(start)
 
         while (queue.isNotEmpty()) {
-            val current = queue.poll()
-            result.add(current)
+            val cur = queue.poll()
+            result.add(cur)
 
-            adj[current]?.forEach { neighbor ->
-                if (neighbor !in visited) {
-                    queue.offer(neighbor)
-                    visited.add(neighbor)
+            adj[cur]?.forEach { nxt ->
+                if (nxt !in visited) {
+                    visited.add(nxt)
+                    queue.offer(nxt)
                 }
             }
         }
-
         return result
-    }
-
-    fun getAdjacencyList(): Map<Int, List<Int>> = adj.toMap()
-
-    fun getEdges(): List<Pair<Int, Int>> {
-        val edges = mutableListOf<Pair<Int, Int>>()
-        adj.forEach { (node, neighbors) ->
-            neighbors.forEach { neighbor ->
-                if (node < neighbor) { // Avoid duplicate edges (undirected graph)
-                    edges.add(node to neighbor)
-                }
-            }
-        }
-        return edges.sortedBy { it.first }
     }
 }
 
 @Composable
-fun BFSResultScreen(navController: NavHostController) {
-    val bfsAlgorithm = remember {
-        BFSAlgorithm().apply {
-            // Thêm các cạnh theo dữ liệu từ code 1
-            addEdge(1, 2)
-            addEdge(1, 3)
-            addEdge(1, 5)
-            addEdge(1, 10)
-            addEdge(2, 4)
-            addEdge(3, 6)
-            addEdge(3, 7)
-            addEdge(3, 9)
-            addEdge(6, 7)
-            addEdge(5, 8)
-            addEdge(8, 9)
-        }
-    }
-
-    val bfsResult = remember { bfsAlgorithm.bfs(1) }
-
-    // Vị trí mới – đã canh gần giống layout của hình 2
-    val nodePositions = listOf(
-        Offset(100f,  60f),   // 1 – trên cùng hơi lệch trái
-        Offset( 60f, 180f),   // 2
-        Offset(260f, 190f),   // 3
-        Offset( 20f, 300f),   // 4 – trái dưới
-        Offset(300f,  90f),   // 5 – giữa trên (nằm giữa 1 & 8)
-        Offset(220f, 340f),   // 6
-        Offset(320f, 340f),   // 7
-        Offset(380f, 190f),   // 8
-        Offset(460f, 320f),   // 9 – phải dưới
-        Offset(520f,  60f)    // 10 – trên cùng bên phải, nối ngang với 1
-    )
+fun BFSInteractiveScreen(navController: NavHostController) {
+    val edges = remember { mutableStateListOf<Pair<Int, Int>>() }
+    var uInput by remember { mutableStateOf("") }
+    var vInput by remember { mutableStateOf("") }
+    var startInput by remember { mutableStateOf("1") }
+    var bfsResult by remember { mutableStateOf<List<Int>>(emptyList()) }
 
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
             .padding(12.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
+
         item {
-            // Header
+            Text(
+                "BFS Interactive Demo",
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(bottom = 12.dp)
+            )
+        }
+
+        /*  EDGE INPUT  */
+        item {
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+                shape = RoundedCornerShape(12.dp)
             ) {
-                Column(
-                    modifier = Modifier.padding(20.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                Column(Modifier.padding(16.dp)) {
+
+                    /* Hai ô nhập u – v và nút Add */
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        OutlinedTextField(
+                            value = uInput,
+                            onValueChange = { uInput = it.filter(Char::isDigit) },
+                            label = { Text("u") },
+                            singleLine = true,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        OutlinedTextField(
+                            value = vInput,
+                            onValueChange = { vInput = it.filter(Char::isDigit) },
+                            label = { Text("v") },
+                            singleLine = true,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Button(onClick = {
+                            val u = uInput.toIntOrNull()
+                            val v = vInput.toIntOrNull()
+                            if (u != null && v != null && u != v) {
+                                if (u to v !in edges && v to u !in edges) {
+                                    edges.add(u to v)
+                                }
+                                uInput = ""
+                                vInput = ""
+                            }
+                        }) { Text("Add") }
+                    }
+
+                    /* Danh sách cạnh */
+                    if (edges.isNotEmpty()) {
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            "Edges: " + edges.joinToString { "(${it.first},${it.second})" },
+                            fontSize = 14.sp
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        TextButton(onClick = {
+                            edges.clear()
+                            bfsResult = emptyList()
+                        }) { Text("Clear edges") }
+                    }
+                }
+            }
+        }
+
+        /* ----- START NODE + RUN BFS ----- */
+        item {
+            Spacer(Modifier.height(12.dp))
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Column(Modifier.padding(16.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        OutlinedTextField(
+                            value = startInput,
+                            onValueChange = { startInput = it.filter(Char::isDigit) },
+                            label = { Text("Start node") },
+                            singleLine = true,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Button(onClick = {
+                            val start = startInput.toIntOrNull() ?: return@Button
+                            /* Build thuật toán và chạy BFS */
+                            val algo = BFSAlgorithm().apply {
+                                edges.forEach { (u, v) -> addEdge(u, v) }
+                            }
+                            bfsResult = algo.bfs(start)
+                        }) { Text("Run BFS") }
+                    }
+                }
+            }
+        }
+
+        // kết quả
+        if (bfsResult.isNotEmpty()) {
+            item {
+                Spacer(Modifier.height(12.dp))
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.primary.copy(0.1f)
+                    )
                 ) {
-                    Text(
-                        text = "BFS Algorithm Result",
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                    Text(
-                        text = "Breadth-First Search từ node 1",
-                        fontSize = 14.sp,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
-                    )
+                    Column(Modifier.padding(16.dp)) {
+                        Text("Traversal order:", fontWeight = FontWeight.Medium)
+                        Text(
+                            bfsResult.joinToString(" → "),
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 }
             }
         }
 
-        item {
-            // Input Graph Visualization
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-            ) {
-                Column(modifier = Modifier.padding(12.dp)) {
-                    Text(
-                        text = "Input Graph (Visualization)",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        modifier = Modifier.padding(bottom = 12.dp)
-                    )
+        // vẽ đồ thị
+        if (edges.isNotEmpty()) {
+            item {
+                Spacer(Modifier.height(12.dp))
 
-                    GraphVisualizer(
-                        edges = bfsAlgorithm.getEdges(),
-                        nodePositions = nodePositions,
-                        nodeCount = 10
+                // Tính vị trí node trên đường tròn đơn giản
+                val maxNode = edges.flatMap { listOf(it.first, it.second) }.maxOrNull() ?: 0
+                val nodePositions by remember(maxNode) {
+                    mutableStateOf(
+                        (1..maxNode).mapIndexed { idx, _ ->
+                            val r = 200f
+                            val cx = 300f
+                            val cy = 300f
+                            val angle = 2 * PI * idx / maxNode
+                            Offset(
+                                cx + (r * cos(angle)).toFloat(),
+                                cy + (r * sin(angle)).toFloat()
+                            )
+                        }
                     )
                 }
-            }
-        }
 
-        item {
-            // Kết quả
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                GraphVisualizer(
+                    edges = edges.sortedBy { it.first },
+                    nodePositions = nodePositions,
+                    nodeCount = nodePositions.size
                 )
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                ) {
-                    Text(
-                        text = "Thứ tự duyệt:",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = bfsResult.joinToString(" → "),
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                }
             }
-
-            Spacer(modifier = Modifier.height(16.dp))
         }
     }
 }
 
+//vẽ đồ thị
 @Composable
-fun GraphVisualizer(edges: List<Pair<Int, Int>>, nodePositions: List<Offset>, nodeCount: Int) {
+fun GraphVisualizer(
+    edges: List<Pair<Int, Int>>,
+    nodePositions: List<Offset>,
+    nodeCount: Int
+) {
     val radius = 40f
 
     Canvas(
@@ -198,29 +232,27 @@ fun GraphVisualizer(edges: List<Pair<Int, Int>>, nodePositions: List<Offset>, no
             .height(600.dp)
             .padding(16.dp)
     ) {
-        // Vẽ cạnh
-        for ((from, to) in edges) {
-            val start = nodePositions[from - 1]
-            val end = nodePositions[to - 1]
+        /* Vẽ cạnh */
+        edges.forEach { (from, to) ->
             drawLine(
                 color = Color.Black,
-                start = start,
-                end = end,
+                start = nodePositions[from - 1],
+                end = nodePositions[to - 1],
                 strokeWidth = 4f
             )
         }
 
-        // Vẽ node
-        nodePositions.take(nodeCount).forEachIndexed { index, position ->
+        /* Vẽ node + nhãn */
+        nodePositions.take(nodeCount).forEachIndexed { idx, pos ->
             drawCircle(
                 color = Color.Cyan,
-                center = position,
+                center = pos,
                 radius = radius
             )
             drawContext.canvas.nativeCanvas.drawText(
-                (index + 1).toString(),
-                position.x,
-                position.y + 10f,
+                (idx + 1).toString(),
+                pos.x,
+                pos.y + 12f,
                 android.graphics.Paint().apply {
                     textSize = 40f
                     textAlign = android.graphics.Paint.Align.CENTER
