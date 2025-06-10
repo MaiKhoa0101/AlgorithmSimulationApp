@@ -1,9 +1,11 @@
 package com.example.algorithmssimulationapp
 
+import android.R
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -29,6 +31,9 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.example.algorithmssimulationapp.search.BFSInteractiveScreen
+import com.example.algorithmssimulationapp.search.dfsStart
+import com.example.algorithmssimulationapp.sort.QuickSortStepScreen
 import com.example.algorithmssimulationapp.sort.showMergeSort
 import com.example.algorithmssimulationapp.sort.showQuickSort
 
@@ -54,12 +59,19 @@ class MainActivity : ComponentActivity() {
                     UIChoose(navHostController)
                 }
                 composable("sort") {
-                    addListFun(list)
+                    addListFun(list, navHostController)
                 }
                 composable("search") {
                     UIChoose(navHostController)
                 }
+                composable("dfs") {
+                    dfsStart(navHostController)
+                }
                 composable("bfs") {
+                    BFSInteractiveScreen(navHostController)
+                }
+                composable("quickSort") {
+                    QuickSortStepScreen(navHostController)
                 }
             }
         }
@@ -72,7 +84,8 @@ class MainActivity : ComponentActivity() {
             modifier = Modifier
                 .fillMaxSize()
                 .padding(16.dp, vertical = 50.dp),
-            horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally
+            horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
             Spacer(modifier = Modifier.height(10.dp))
             Text("Sort", fontWeight = FontWeight.Bold, fontSize = 30.sp)
@@ -81,15 +94,9 @@ class MainActivity : ComponentActivity() {
                     navHostController.navigate("sort")
                 }
             ) {
-                Text("Merge Sort")
+                Text("Sort Algorithm")
             }
-            Button(
-                onClick = {
-                    navHostController.navigate("sort")
-                }
-            ) {
-                Text("Quick Sort")
-            }
+
             Spacer(modifier = Modifier.height(10.dp))
             Text("Search", fontWeight = FontWeight.Bold, fontSize = 30.sp)
             Button(
@@ -101,6 +108,7 @@ class MainActivity : ComponentActivity() {
             }
             Button(
                 onClick = {
+                    navHostController.navigate("dfs")
                 }
             ) {
                 Text("DFS")
@@ -109,10 +117,11 @@ class MainActivity : ComponentActivity() {
     }
 
     @Composable
-    fun addListFun(list: MutableList<Int>) {
+    fun addListFun(list: MutableList<Int>, navController: NavHostController) {
         var number by remember { mutableStateOf("") }
         var onSubmitted by remember { mutableStateOf(false) }
         var selection by remember { mutableStateOf("") }
+
         val modifier = Modifier
             .padding(10.dp)
             .width(150.dp)
@@ -133,7 +142,7 @@ class MainActivity : ComponentActivity() {
             Column {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceAround
+                    horizontalArrangement = Arrangement.SpaceAround
                 ) {
                     Button(
                         onClick = {
@@ -194,17 +203,16 @@ class MainActivity : ComponentActivity() {
                         Button(
                             modifier = modifier,
                             onClick = {
-                                onSubmitted = true
-                                println("Mảng ban đầu: $list")
+                                navController.navigate("quickSort")
                             }
                         ) {
                             Text("Quick Sort normal")
                         }
                         Button(
-                            modifier = modifier ,
+                            modifier = modifier,
                             onClick = {
                                 onSubmitted = true
-                                println("Mảng ban đầu: $list")
+                                selection = "betterquicksort"
                             }
                         ) {
                             Text("Quick Sort better")
@@ -220,8 +228,10 @@ class MainActivity : ComponentActivity() {
                         showMergeSort(list, "naturalmergesort")
                     }
                 }
-                if (list.size > 1 && onSubmitted) {
-                    showQuickSort(list, "betterquicksort")
+                if (list.size > 1 && onSubmitted ) {
+                    if (selection == "betterquicksort") {
+                        showQuickSort(list, "betterquicksort")
+                    }
                 }
             }
         }
