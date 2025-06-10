@@ -55,7 +55,7 @@ class BFSAlgorithm {
 
 @Composable
 fun BFSInteractiveScreen(navController: NavHostController) {
-    val edges = remember { mutableStateListOf<Pair<Int, Int>>() }
+    var edges = remember { mutableStateListOf<Pair<Int, Int>>() }
     var uInput by remember { mutableStateOf("") }
     var vInput by remember { mutableStateOf("") }
     var startInput by remember { mutableStateOf("1") }
