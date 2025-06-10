@@ -1,5 +1,6 @@
 package com.example.algorithmssimulationapp
 
+import android.R
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -12,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -33,6 +35,7 @@ import com.example.algorithmssimulationapp.search.BFSInteractiveScreen
 import com.example.algorithmssimulationapp.search.dfsStart
 import com.example.algorithmssimulationapp.sort.QuickSortStepScreen
 import com.example.algorithmssimulationapp.sort.showMergeSort
+import com.example.algorithmssimulationapp.sort.showQuickSort
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -53,7 +56,7 @@ class MainActivity : ComponentActivity() {
                     UIChoose(navHostController)
                 }
                 composable("sort") {
-                    addListFun(list)
+                    addListFun(list, navHostController)
                 }
                 composable("search") {
                     UIChoose(navHostController)
@@ -75,7 +78,9 @@ class MainActivity : ComponentActivity() {
     fun UIChoose(navHostController: NavHostController) {
 
         Column(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp, vertical = 50.dp),
             horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
@@ -86,15 +91,9 @@ class MainActivity : ComponentActivity() {
                     navHostController.navigate("sort")
                 }
             ) {
-                Text("Merge Sort")
+                Text("Sort Algorithm")
             }
-            Button(
-                onClick = {
-                    navHostController.navigate("quickSort")
-                }
-            ) {
-                Text("Quick Sort")
-            }
+
             Spacer(modifier = Modifier.height(10.dp))
             Text("Search", fontWeight = FontWeight.Bold, fontSize = 30.sp)
             Button(
@@ -115,12 +114,18 @@ class MainActivity : ComponentActivity() {
     }
 
     @Composable
-    fun addListFun(list: MutableList<Int>) {
+    fun addListFun(list: MutableList<Int>, navController: NavHostController) {
         var number by remember { mutableStateOf("") }
         var onSubmitted by remember { mutableStateOf(false) }
         var selection by remember { mutableStateOf("") }
+
+        val modifier = Modifier
+            .padding(10.dp)
+            .width(150.dp)
         Column(
-            modifier = Modifier.fillMaxSize().padding(16.dp, vertical = 50.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp, vertical = 50.dp),
             horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally
         ) {
             Text("Mảng hiện tại: $list")
@@ -134,13 +139,21 @@ class MainActivity : ComponentActivity() {
             Column {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceAround
+                    horizontalArrangement = Arrangement.SpaceAround
                 ) {
                     Button(
                         onClick = {
-                            if (number.isNotEmpty() && number.isDigitsOnly()) {
+                            if (number.isNotEmpty()) {
+                                for (i in number){
+                                    if (!i.isDigit() && (i != '-' || number.length <=1)|| number.count( { it == '-' })>1) {
+                                        println("Invalid input")
+                                        return@Button
+                                    }
+
+                                }
                                 list.add(number.toInt())
                                 number = ""
+
                             } else {
                                 println("Invalid input")
                             }
@@ -159,31 +172,63 @@ class MainActivity : ComponentActivity() {
                     }
                 }
                 Row {
-                    //Submit button
-                    Button(
-                        onClick = {
-                            onSubmitted = true
-                            selection = "merge"
+                    Column {
+                        //Submit button
+                        Button(
+                            modifier = modifier,
+                            onClick = {
+                                onSubmitted = true
+                                selection = "naturalmergesort"
+                                println("Mảng ban đầu: $list")
+                            }
+                        ) {
+                            Text("Natural Merge Sort")
+                        }
+                        Button(
+                            modifier = modifier,
+                            onClick = {
+                                onSubmitted = true
+                                selection = "merge"
 
-                            println("Mảng ban đầu: $list")
+                                println("Mảng ban đầu: $list")
+                            }
+                        ) {
+                            Text("Merge Sort")
                         }
-                    ) {
-                        Text("Merge Sort and show")
                     }
-                    Button(
-                        onClick = {
-                            onSubmitted = true
-                            println("Mảng ban đầu: $list")
+                    Column {
+                        Button(
+                            modifier = modifier,
+                            onClick = {
+                                navController.navigate("quickSort")
+                            }
+                        ) {
+                            Text("Quick Sort normal")
                         }
-                    ) {
-                        Text("Quick Sort and show")
+                        Button(
+                            modifier = modifier,
+                            onClick = {
+                                onSubmitted = true
+                                selection = "betterquicksort"
+                            }
+                        ) {
+                            Text("Quick Sort better")
+                        }
                     }
                 }
 
-                if (list.size > 1 && onSubmitted && selection == "merge") {
-                    showMergeSort(list)
+                if (list.size > 1 && onSubmitted) {
+                    if (selection == "normalmergesort") {
+                        showMergeSort(list, "normalmergesort")
+                    }
+                    if (selection == "naturalmergesort") {
+                        showMergeSort(list, "naturalmergesort")
+                    }
                 }
-                if (list.size > 1 && onSubmitted && selection == "quick") {
+                if (list.size > 1 && onSubmitted ) {
+                    if (selection == "betterquicksort") {
+                        showQuickSort(list, "betterquicksort")
+                    }
                 }
             }
         }
