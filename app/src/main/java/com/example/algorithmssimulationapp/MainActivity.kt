@@ -30,13 +30,17 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.algorithmssimulationapp.sort.showMergeSort
+import com.example.algorithmssimulationapp.sort.showQuickSort
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            val list = mutableListOf(0)
+            var list = mutableListOf(0)
+            var list2 by remember { mutableStateOf(list) }
+            list = list2
+            list2 = list
             val graph = mapOf(
                 1 to listOf(2, 3),
                 2 to listOf(4),
@@ -216,7 +220,8 @@ class MainActivity : ComponentActivity() {
                         showMergeSort(list, "naturalmergesort")
                     }
                 }
-                if (list.size > 1 && onSubmitted && selection == "quick") {
+                if (list.size > 1 && onSubmitted) {
+                    showQuickSort(list, "betterquicksort")
                 }
             }
         }
