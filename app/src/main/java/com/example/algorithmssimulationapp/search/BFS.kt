@@ -1,6 +1,7 @@
 package com.example.algorithmssimulationapp.search
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -59,6 +60,7 @@ fun BFSInteractiveScreen(navController: NavHostController) {
     var vInput by remember { mutableStateOf("") }
     var startInput by remember { mutableStateOf("1") }
     var bfsResult by remember { mutableStateOf<List<Int>>(emptyList()) }
+    var currentStepIdx  by remember { mutableStateOf(-1) }   // -1 = chưa bắt đầu
 
     LazyColumn(
         modifier = Modifier
@@ -68,15 +70,26 @@ fun BFSInteractiveScreen(navController: NavHostController) {
     ) {
 
         item {
-            Text(
-                "BFS Interactive Demo",
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(bottom = 12.dp)
-            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Button(onClick = {navController.popBackStack()}) {
+                    Text("Back")
+                }
+                Text(
+                    "BFS Interactive Demo",
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 12.dp)
+                )
+            }
         }
 
-        /*  EDGE INPUT  */
+        // EDGE INPUT
         item {
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -84,7 +97,7 @@ fun BFSInteractiveScreen(navController: NavHostController) {
             ) {
                 Column(Modifier.padding(16.dp)) {
 
-                    /* Hai ô nhập u – v và nút Add */
+                    // Hai ô nhập u – v và nút Add
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         OutlinedTextField(
                             value = uInput,
@@ -115,7 +128,7 @@ fun BFSInteractiveScreen(navController: NavHostController) {
                         }) { Text("Add") }
                     }
 
-                    /* Danh sách cạnh */
+                    // Danh sách cạnh
                     if (edges.isNotEmpty()) {
                         Spacer(Modifier.height(8.dp))
                         Text(
@@ -132,7 +145,7 @@ fun BFSInteractiveScreen(navController: NavHostController) {
             }
         }
 
-        /* ----- START NODE + RUN BFS ----- */
+        // START NODE + RUN BFS
         item {
             Spacer(Modifier.height(12.dp))
             Card(
@@ -151,11 +164,12 @@ fun BFSInteractiveScreen(navController: NavHostController) {
                         Spacer(Modifier.width(8.dp))
                         Button(onClick = {
                             val start = startInput.toIntOrNull() ?: return@Button
-                            /* Build thuật toán và chạy BFS */
+                            // Build thuật toán và chạy BFS
                             val algo = BFSAlgorithm().apply {
                                 edges.forEach { (u, v) -> addEdge(u, v) }
                             }
                             bfsResult = algo.bfs(start)
+                            currentStepIdx = -1         // chuẩn bị cho mô phỏng mới
                         }) { Text("Run BFS") }
                     }
                 }
@@ -181,6 +195,22 @@ fun BFSInteractiveScreen(navController: NavHostController) {
                             color = MaterialTheme.colorScheme.primary
                         )
                     }
+                }
+            }
+
+            item {
+                Spacer(Modifier.height(8.dp))
+                Button(
+                    onClick = {
+                        if (currentStepIdx >= bfsResult.lastIndex) {
+                            // Hết ─> reset
+                            currentStepIdx = -1
+                        } else {
+                            currentStepIdx += 1
+                        }
+                    }
+                ) {
+                    Text(if (currentStepIdx >= bfsResult.lastIndex) "Reset" else "Next step")
                 }
             }
         }
@@ -210,7 +240,9 @@ fun BFSInteractiveScreen(navController: NavHostController) {
                 GraphVisualizer(
                     edges = edges.sortedBy { it.first },
                     nodePositions = nodePositions,
-                    nodeCount = nodePositions.size
+                    nodeCount = nodePositions.size,
+                    visited       = bfsResult.take(currentStepIdx.coerceAtLeast(0)).toSet(),
+                    current       = bfsResult.getOrNull(currentStepIdx)
                 )
             }
         }
@@ -222,42 +254,49 @@ fun BFSInteractiveScreen(navController: NavHostController) {
 fun GraphVisualizer(
     edges: List<Pair<Int, Int>>,
     nodePositions: List<Offset>,
-    nodeCount: Int
+    nodeCount: Int,
+    visited: Set<Int>,
+    current: Int?
 ) {
     val radius = 40f
-
     Canvas(
         modifier = Modifier
             .fillMaxWidth()
             .height(600.dp)
             .padding(16.dp)
     ) {
-        /* Vẽ cạnh */
+        // Vẽ cạnh
         edges.forEach { (from, to) ->
             drawLine(
-                color = Color.Black,
+                color = Color.Gray,
                 start = nodePositions[from - 1],
                 end = nodePositions[to - 1],
                 strokeWidth = 4f
             )
         }
 
-        /* Vẽ node + nhãn */
+        // Vẽ node
         nodePositions.take(nodeCount).forEachIndexed { idx, pos ->
-            drawCircle(
-                color = Color.Cyan,
-                center = pos,
-                radius = radius
-            )
+            val nodeId      = idx + 1
+            val fillColor = when {
+                nodeId == current -> Color.Red            // đang xử lý
+                nodeId in visited  -> Color(0xFF4CAF50)   // đã thăm (xanh lá)
+                else               -> Color.Cyan          // chưa thăm
+            }
+
+            drawCircle(color = fillColor, center = pos, radius = radius)
+
             drawContext.canvas.nativeCanvas.drawText(
-                (idx + 1).toString(),
+                nodeId.toString(),
                 pos.x,
                 pos.y + 12f,
                 android.graphics.Paint().apply {
-                    textSize = 40f
+                    textSize  = 40f
+                    isFakeBoldText = true
                     textAlign = android.graphics.Paint.Align.CENTER
                 }
             )
         }
     }
 }
+

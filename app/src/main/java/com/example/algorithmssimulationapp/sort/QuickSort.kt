@@ -195,7 +195,17 @@ fun QuickSortStepScreen(navController: NavHostController) {
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text("QuickSort - Hoare Partition", style = MaterialTheme.typography.titleLarge)
+        Row(modifier = Modifier
+            .fillMaxWidth()
+            .padding(20.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("QuickSort", style = MaterialTheme.typography.titleLarge)
+            Button(onClick = {navController.popBackStack()}){
+                Text("Back")
+            }
+        }
         Spacer(modifier = Modifier.height(16.dp))
 
         // Phần nhập mảng
