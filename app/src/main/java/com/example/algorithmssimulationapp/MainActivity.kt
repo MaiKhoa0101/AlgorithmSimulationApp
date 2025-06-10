@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -28,7 +29,6 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.example.algorithmssimulationapp.search.bfsStart
 import com.example.algorithmssimulationapp.sort.showMergeSort
 
 class MainActivity : ComponentActivity() {
@@ -56,7 +56,6 @@ class MainActivity : ComponentActivity() {
                     UIChoose(navHostController)
                 }
                 composable("bfs") {
-                    bfsStart(navHostController)
                 }
             }
         }
@@ -66,7 +65,9 @@ class MainActivity : ComponentActivity() {
     fun UIChoose(navHostController: NavHostController) {
 
         Column(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp, vertical = 50.dp),
             horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally
         ) {
             Spacer(modifier = Modifier.height(10.dp))
@@ -108,8 +109,13 @@ class MainActivity : ComponentActivity() {
         var number by remember { mutableStateOf("") }
         var onSubmitted by remember { mutableStateOf(false) }
         var selection by remember { mutableStateOf("") }
+        val modifier = Modifier
+            .padding(10.dp)
+            .width(150.dp)
         Column(
-            modifier = Modifier.fillMaxSize().padding(16.dp, vertical = 50.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp, vertical = 50.dp),
             horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally
         ) {
             Text("Mảng hiện tại: $list")
@@ -127,9 +133,17 @@ class MainActivity : ComponentActivity() {
                 ) {
                     Button(
                         onClick = {
-                            if (number.isNotEmpty() && number.isDigitsOnly()) {
+                            if (number.isNotEmpty()) {
+                                for (i in number){
+                                    if (!i.isDigit() && (i != '-' || number.length <=1)|| number.count( { it == '-' })>1) {
+                                        println("Invalid input")
+                                        return@Button
+                                    }
+
+                                }
                                 list.add(number.toInt())
                                 number = ""
+
                             } else {
                                 println("Invalid input")
                             }
@@ -148,29 +162,59 @@ class MainActivity : ComponentActivity() {
                     }
                 }
                 Row {
-                    //Submit button
-                    Button(
-                        onClick = {
-                            onSubmitted = true
-                            selection = "merge"
+                    Column {
+                        //Submit button
+                        Button(
+                            modifier = modifier,
+                            onClick = {
+                                onSubmitted = true
+                                selection = "naturalmergesort"
+                                println("Mảng ban đầu: $list")
+                            }
+                        ) {
+                            Text("Natural Merge Sort")
+                        }
+                        Button(
+                            modifier = modifier,
+                            onClick = {
+                                onSubmitted = true
+                                selection = "merge"
 
-                            println("Mảng ban đầu: $list")
+                                println("Mảng ban đầu: $list")
+                            }
+                        ) {
+                            Text("Merge Sort")
                         }
-                    ) {
-                        Text("Merge Sort and show")
                     }
-                    Button(
-                        onClick = {
-                            onSubmitted = true
-                            println("Mảng ban đầu: $list")
+                    Column {
+                        Button(
+                            modifier = modifier,
+                            onClick = {
+                                onSubmitted = true
+                                println("Mảng ban đầu: $list")
+                            }
+                        ) {
+                            Text("Quick Sort normal")
                         }
-                    ) {
-                        Text("Quick Sort and show")
+                        Button(
+                            modifier = modifier ,
+                            onClick = {
+                                onSubmitted = true
+                                println("Mảng ban đầu: $list")
+                            }
+                        ) {
+                            Text("Quick Sort better")
+                        }
                     }
                 }
 
-                if (list.size > 1 && onSubmitted && selection == "merge") {
-                    showMergeSort(list)
+                if (list.size > 1 && onSubmitted) {
+                    if (selection == "normalmergesort") {
+                        showMergeSort(list, "normalmergesort")
+                    }
+                    if (selection == "naturalmergesort") {
+                        showMergeSort(list, "naturalmergesort")
+                    }
                 }
                 if (list.size > 1 && onSubmitted && selection == "quick") {
                 }
