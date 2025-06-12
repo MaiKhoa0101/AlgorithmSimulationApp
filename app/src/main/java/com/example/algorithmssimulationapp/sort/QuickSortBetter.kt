@@ -2,7 +2,9 @@ package com.example.algorithmssimulationapp.sort
 
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -10,12 +12,24 @@ import com.example.algorithmssimulationapp.showList
 
 @Composable
 fun showQuickSort(arr: MutableList<Int>, option:String) {
-    if (option == "normalquicksort") {
+    var sortedList = remember { mutableStateListOf<Int>() }
+    showList(sortedList,"Bat dau")
 
-    }
-    else if (option == "betterquicksort") {
-        var sortedList by remember { mutableStateOf(quicksortbetter(arr, 0, arr.size - 1)) }
-        showList(sortedList.toMutableList())
+    LaunchedEffect(option) {
+        println("option: " + option)
+        when (option) {
+            "normalquicksort" -> {
+                sortedList.clear()
+                sortedList.addAll(mergeSort(arr))
+            }
+
+            "betterquicksort" -> {
+                sortedList.clear()
+                sortedList.addAll(
+                    quicksortbetter(arr, 0, arr.size - 1)
+                )
+            }
+        }
     }
 }
 
@@ -46,8 +60,4 @@ fun quicksortbetter(arr: MutableList<Int>, leftInput: Int, rightInput: Int): Mut
         quicksortbetter(arr, left, rightInput)
     }
     return arr
-}
-
-fun splitRuns(arr: MutableList<Int>, start: Int, end: Int) {
-
 }
