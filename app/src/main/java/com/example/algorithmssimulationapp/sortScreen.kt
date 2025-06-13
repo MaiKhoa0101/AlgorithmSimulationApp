@@ -133,14 +133,8 @@ fun addListFun(navController: NavHostController) {
                         }
                     }
 
-                    Row(modifier = Modifier.fillMaxWidth()) {
-                        OnclickButton(modifier, "Quick Sort normal") {
-                            navController.navigate("quickSort")
-                        }
-
-                        OnclickButton(modifier, "Quick Sort better") {
-                            navController.navigate("betterquickSort")
-                        }
+                    OnclickButton(modifier, "Quick Sort normal") {
+                        navController.navigate("quickSort")
                     }
                 }
             }
