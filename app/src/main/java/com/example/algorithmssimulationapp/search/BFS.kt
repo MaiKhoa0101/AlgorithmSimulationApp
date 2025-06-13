@@ -219,19 +219,45 @@ fun BFSInteractiveScreen(navController: NavHostController) {
                 }
             }
 
+            // Nút điều khiển Previous, Next, Reset
             item {
                 Spacer(Modifier.height(8.dp))
-                Button(
-                    onClick = {
-                        if (currentStepIdx >= bfsResult.lastIndex) {
-                            // Hết ─> reset
-                            currentStepIdx = -1
-                        } else {
-                            currentStepIdx += 1
-                        }
-                    }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
-                    Text(if (currentStepIdx >= bfsResult.lastIndex) "Reset" else "Next step")
+                    // Nút Previous
+                    Button(
+                        onClick = {
+                            if (currentStepIdx > -1) {
+                                currentStepIdx -= 1
+                            }
+                        },
+                        enabled = currentStepIdx > -1
+                    ) {
+                        Text("Previous")
+                    }
+
+                    // Nút Next
+                    Button(
+                        onClick = {
+                            if (currentStepIdx < bfsResult.lastIndex) {
+                                currentStepIdx += 1
+                            }
+                        },
+                        enabled = currentStepIdx < bfsResult.lastIndex
+                    ) {
+                        Text("Next")
+                    }
+
+                    // Nút Reset
+                    Button(
+                        onClick = {
+                            currentStepIdx = -1
+                        }
+                    ) {
+                        Text("Reset")
+                    }
                 }
             }
         }
