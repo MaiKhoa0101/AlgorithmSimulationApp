@@ -32,13 +32,15 @@ class BFSAlgorithm(private val isDirected: Boolean = false) {
         }
     }
 
-    fun bfs(start: Int): List<Int> {
+    fun bfs(start: Int): Pair<List<Int>, List<List<Int>>> {
         val visited = mutableSetOf<Int>()
         val queue: Queue<Int> = LinkedList()
         val result = mutableListOf<Int>()
+        val queueStates = mutableListOf<List<Int>>()
 
         queue.offer(start)
         visited.add(start)
+        queueStates.add(queue.toList())
 
         while (queue.isNotEmpty()) {
             val cur = queue.poll()
@@ -50,8 +52,9 @@ class BFSAlgorithm(private val isDirected: Boolean = false) {
                     queue.offer(nxt)
                 }
             }
+            queueStates.add(queue.toList())
         }
-        return result
+        return result to queueStates
     }
 }
 
@@ -62,7 +65,8 @@ fun BFSInteractiveScreen(navController: NavHostController) {
     var vInput by remember { mutableStateOf("") }
     var startInput by remember { mutableStateOf("1") }
     var bfsResult by remember { mutableStateOf<List<Int>>(emptyList()) }
-    var currentStepIdx  by remember { mutableStateOf(-1) }   // -1 = chưa bắt đầu
+    var queueStates by remember { mutableStateOf<List<List<Int>>>(emptyList()) }
+    var currentStepIdx by remember { mutableStateOf(-1) }
     var isDirected by remember { mutableStateOf(false) }
 
     LazyColumn(
@@ -71,7 +75,6 @@ fun BFSInteractiveScreen(navController: NavHostController) {
             .padding(12.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-
         item {
             Row(
                 modifier = Modifier
@@ -80,7 +83,7 @@ fun BFSInteractiveScreen(navController: NavHostController) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Button(onClick = {navController.popBackStack()}) {
+                Button(onClick = { navController.popBackStack() }) {
                     Text("Back")
                 }
                 Text(
@@ -110,15 +113,12 @@ fun BFSInteractiveScreen(navController: NavHostController) {
             }
         }
 
-        // EDGE INPUT
         item {
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp)
             ) {
                 Column(Modifier.padding(16.dp)) {
-
-                    // Hai ô nhập u – v và nút Add
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         OutlinedTextField(
                             value = uInput,
@@ -149,7 +149,6 @@ fun BFSInteractiveScreen(navController: NavHostController) {
                         }) { Text("Add") }
                     }
 
-                    // Danh sách cạnh
                     if (edges.isNotEmpty()) {
                         Spacer(Modifier.height(8.dp))
                         Text(
@@ -160,13 +159,14 @@ fun BFSInteractiveScreen(navController: NavHostController) {
                         TextButton(onClick = {
                             edges.clear()
                             bfsResult = emptyList()
+                            queueStates = emptyList()
+                            currentStepIdx = -1
                         }) { Text("Clear edges") }
                     }
                 }
             }
         }
 
-        // START NODE + RUN BFS
         item {
             Spacer(Modifier.height(12.dp))
             Card(
@@ -185,19 +185,19 @@ fun BFSInteractiveScreen(navController: NavHostController) {
                         Spacer(Modifier.width(8.dp))
                         Button(onClick = {
                             val start = startInput.toIntOrNull() ?: return@Button
-                            // Build thuật toán và chạy BFS
                             val algo = BFSAlgorithm(isDirected = isDirected).apply {
                                 edges.forEach { (u, v) -> addEdge(u, v) }
                             }
-                            bfsResult = algo.bfs(start)
-                            currentStepIdx = -1         // chuẩn bị cho mô phỏng mới
+                            val (result, states) = algo.bfs(start)
+                            bfsResult = result
+                            queueStates = states
+                            currentStepIdx = -1
                         }) { Text("Run BFS") }
                     }
                 }
             }
         }
 
-        // kết quả
         if (bfsResult.isNotEmpty()) {
             item {
                 Spacer(Modifier.height(12.dp))
@@ -210,16 +210,26 @@ fun BFSInteractiveScreen(navController: NavHostController) {
                     Column(Modifier.padding(16.dp)) {
                         Text("Traversal order:", fontWeight = FontWeight.Medium)
                         Text(
-                            bfsResult.joinToString(" → "),
+                            if (currentStepIdx >= 0) {
+                                bfsResult.take(currentStepIdx + 1).joinToString(" → ")
+                            } else {
+                                "None"
+                            },
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Text("Queue at step ${currentStepIdx + 1}:", fontWeight = FontWeight.Medium)
+                        Text(
+                            queueStates.getOrNull(currentStepIdx + 1)?.joinToString(", ") ?: "Empty",
+                            fontSize = 16.sp,
+                            color = MaterialTheme.colorScheme.secondary
                         )
                     }
                 }
             }
 
-            // Nút điều khiển Previous, Next, Reset
             item {
                 Spacer(Modifier.height(8.dp))
                 Row(
@@ -262,12 +272,9 @@ fun BFSInteractiveScreen(navController: NavHostController) {
             }
         }
 
-        // vẽ đồ thị
         if (edges.isNotEmpty()) {
             item {
                 Spacer(Modifier.height(12.dp))
-
-                // Tính vị trí node trên đường tròn đơn giản
                 val maxNode = edges.flatMap { listOf(it.first, it.second) }.maxOrNull() ?: 0
                 val nodePositions by remember(maxNode) {
                     mutableStateOf(
@@ -289,21 +296,22 @@ fun BFSInteractiveScreen(navController: NavHostController) {
                     nodePositions = nodePositions,
                     nodeCount = nodePositions.size,
                     visited = bfsResult.take(currentStepIdx.coerceAtLeast(0)).toSet(),
-                    current = bfsResult.getOrNull(currentStepIdx)
+                    current = bfsResult.getOrNull(currentStepIdx),
+                    isDirected = isDirected
                 )
             }
         }
     }
 }
 
-//vẽ đồ thị
 @Composable
 fun GraphVisualizer(
     edges: List<Pair<Int, Int>>,
     nodePositions: List<Offset>,
     nodeCount: Int,
     visited: Set<Int>,
-    current: Int?
+    current: Int?,
+    isDirected: Boolean
 ) {
     val radius = 40f
     Canvas(
@@ -324,11 +332,11 @@ fun GraphVisualizer(
 
         // Vẽ node
         nodePositions.take(nodeCount).forEachIndexed { idx, pos ->
-            val nodeId      = idx + 1
+            val nodeId = idx + 1
             val fillColor = when {
-                nodeId == current -> Color.Red            // đang xử lý
-                nodeId in visited  -> Color(0xFF4CAF50)   // đã thăm (xanh lá)
-                else               -> Color.Cyan          // chưa thăm
+                nodeId == current -> Color.Red
+                nodeId in visited -> Color(0xFF4CAF50)
+                else -> Color.Cyan
             }
 
             drawCircle(color = fillColor, center = pos, radius = radius)
@@ -338,7 +346,7 @@ fun GraphVisualizer(
                 pos.x,
                 pos.y + 12f,
                 android.graphics.Paint().apply {
-                    textSize  = 40f
+                    textSize = 40f
                     isFakeBoldText = true
                     textAlign = android.graphics.Paint.Align.CENTER
                 }
@@ -346,35 +354,4 @@ fun GraphVisualizer(
         }
     }
 }
-
-@Composable
-fun DrawScope.drawArrow(start: Offset, end: Offset, color: Color, strokeWidth: Float = 4f) {
-    // Vẽ đường chính
-    drawLine(
-        color = color,
-        start = start,
-        end = end,
-        strokeWidth = strokeWidth
-    )
-
-    // Tính toán đầu mũi tên
-    val angle = Math.atan2((end.y - start.y).toDouble(), (end.x - start.x).toDouble())
-    val arrowLength = 20f
-    val angle1 = angle - Math.toRadians(30.0)
-    val angle2 = angle + Math.toRadians(30.0)
-
-    val point1 = Offset(
-        (end.x - arrowLength * cos(angle1)).toFloat(),
-        (end.y - arrowLength * sin(angle1)).toFloat()
-    )
-    val point2 = Offset(
-        (end.x - arrowLength * cos(angle2)).toFloat(),
-        (end.y - arrowLength * sin(angle2)).toFloat()
-    )
-
-    // Vẽ hai đường tạo thành đầu mũi tên
-    drawLine(color, end, point1, strokeWidth = strokeWidth)
-    drawLine(color, end, point2, strokeWidth = strokeWidth)
-}
-
 
