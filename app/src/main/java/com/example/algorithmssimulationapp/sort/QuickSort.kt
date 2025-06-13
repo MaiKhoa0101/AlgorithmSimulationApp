@@ -53,6 +53,8 @@ fun generateQuickSortSteps(array: List<Int>): List<Pair<SortStep, List<Int>>> {
             val pivotIndex = (left + right) / 2
             val pivotValue = workingArray[pivotIndex]
             steps.add(SortStep.SetPivot(pivotIndex, pivotValue, left, right) to workingArray.toList())
+            println("pivot value $pivotValue")
+            println("working arr "+ workingArray.toList())
 
             // Khởi tạo con trỏ
             var i = left

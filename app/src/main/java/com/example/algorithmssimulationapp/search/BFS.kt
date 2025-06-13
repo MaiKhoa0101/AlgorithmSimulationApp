@@ -1,7 +1,6 @@
 package com.example.algorithmssimulationapp.search
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -11,6 +10,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -22,12 +22,14 @@ import kotlin.math.sin
 import java.util.LinkedList
 import java.util.Queue
 
-class BFSAlgorithm {
+class BFSAlgorithm(private val isDirected: Boolean = false) {
     private val adj = mutableMapOf<Int, MutableList<Int>>()
 
     fun addEdge(u: Int, v: Int) {
         adj.getOrPut(u) { mutableListOf() }.add(v)
-        adj.getOrPut(v) { mutableListOf() }.add(u)
+        if (!isDirected) {
+            adj.getOrPut(v) { mutableListOf() }.add(u)
+        }
     }
 
     fun bfs(start: Int): List<Int> {
@@ -61,6 +63,7 @@ fun BFSInteractiveScreen(navController: NavHostController) {
     var startInput by remember { mutableStateOf("1") }
     var bfsResult by remember { mutableStateOf<List<Int>>(emptyList()) }
     var currentStepIdx  by remember { mutableStateOf(-1) }   // -1 = chưa bắt đầu
+    var isDirected by remember { mutableStateOf(false) }
 
     LazyColumn(
         modifier = Modifier
@@ -86,6 +89,24 @@ fun BFSInteractiveScreen(navController: NavHostController) {
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(bottom = 12.dp)
                 )
+            }
+        }
+
+        item {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Directed Graph?")
+                Spacer(Modifier.width(8.dp))
+                Switch(
+                    checked = isDirected,
+                    onCheckedChange = { isDirected = it }
+                )
+                Spacer(Modifier.width(16.dp))
+                Text(if (isDirected) "(Directed)" else "(Undirected)")
             }
         }
 
@@ -165,7 +186,7 @@ fun BFSInteractiveScreen(navController: NavHostController) {
                         Button(onClick = {
                             val start = startInput.toIntOrNull() ?: return@Button
                             // Build thuật toán và chạy BFS
-                            val algo = BFSAlgorithm().apply {
+                            val algo = BFSAlgorithm(isDirected = isDirected).apply {
                                 edges.forEach { (u, v) -> addEdge(u, v) }
                             }
                             bfsResult = algo.bfs(start)
@@ -241,8 +262,8 @@ fun BFSInteractiveScreen(navController: NavHostController) {
                     edges = edges.sortedBy { it.first },
                     nodePositions = nodePositions,
                     nodeCount = nodePositions.size,
-                    visited       = bfsResult.take(currentStepIdx.coerceAtLeast(0)).toSet(),
-                    current       = bfsResult.getOrNull(currentStepIdx)
+                    visited = bfsResult.take(currentStepIdx.coerceAtLeast(0)).toSet(),
+                    current = bfsResult.getOrNull(currentStepIdx)
                 )
             }
         }
@@ -299,4 +320,35 @@ fun GraphVisualizer(
         }
     }
 }
+
+@Composable
+fun DrawScope.drawArrow(start: Offset, end: Offset, color: Color, strokeWidth: Float = 4f) {
+    // Vẽ đường chính
+    drawLine(
+        color = color,
+        start = start,
+        end = end,
+        strokeWidth = strokeWidth
+    )
+
+    // Tính toán đầu mũi tên
+    val angle = Math.atan2((end.y - start.y).toDouble(), (end.x - start.x).toDouble())
+    val arrowLength = 20f
+    val angle1 = angle - Math.toRadians(30.0)
+    val angle2 = angle + Math.toRadians(30.0)
+
+    val point1 = Offset(
+        (end.x - arrowLength * cos(angle1)).toFloat(),
+        (end.y - arrowLength * sin(angle1)).toFloat()
+    )
+    val point2 = Offset(
+        (end.x - arrowLength * cos(angle2)).toFloat(),
+        (end.y - arrowLength * sin(angle2)).toFloat()
+    )
+
+    // Vẽ hai đường tạo thành đầu mũi tên
+    drawLine(color, end, point1, strokeWidth = strokeWidth)
+    drawLine(color, end, point2, strokeWidth = strokeWidth)
+}
+
 
