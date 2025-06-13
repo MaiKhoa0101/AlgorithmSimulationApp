@@ -1,7 +1,6 @@
 package com.example.algorithmssimulationapp.search
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -11,6 +10,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -22,21 +22,25 @@ import kotlin.math.sin
 import java.util.LinkedList
 import java.util.Queue
 
-class BFSAlgorithm {
+class BFSAlgorithm(private val isDirected: Boolean = false) {
     private val adj = mutableMapOf<Int, MutableList<Int>>()
 
     fun addEdge(u: Int, v: Int) {
         adj.getOrPut(u) { mutableListOf() }.add(v)
-        adj.getOrPut(v) { mutableListOf() }.add(u)
+        if (!isDirected) {
+            adj.getOrPut(v) { mutableListOf() }.add(u)
+        }
     }
 
-    fun bfs(start: Int): List<Int> {
+    fun bfs(start: Int): Pair<List<Int>, List<List<Int>>> {
         val visited = mutableSetOf<Int>()
         val queue: Queue<Int> = LinkedList()
         val result = mutableListOf<Int>()
+        val queueStates = mutableListOf<List<Int>>()
 
         queue.offer(start)
         visited.add(start)
+        queueStates.add(queue.toList())
 
         while (queue.isNotEmpty()) {
             val cur = queue.poll()
@@ -48,8 +52,9 @@ class BFSAlgorithm {
                     queue.offer(nxt)
                 }
             }
+            queueStates.add(queue.toList())
         }
-        return result
+        return result to queueStates
     }
 }
 
@@ -60,7 +65,9 @@ fun BFSInteractiveScreen(navController: NavHostController) {
     var vInput by remember { mutableStateOf("") }
     var startInput by remember { mutableStateOf("1") }
     var bfsResult by remember { mutableStateOf<List<Int>>(emptyList()) }
-    var currentStepIdx  by remember { mutableStateOf(-1) }   // -1 = chưa bắt đầu
+    var queueStates by remember { mutableStateOf<List<List<Int>>>(emptyList()) }
+    var currentStepIdx by remember { mutableStateOf(-1) }
+    var isDirected by remember { mutableStateOf(false) }
 
     LazyColumn(
         modifier = Modifier
@@ -68,7 +75,6 @@ fun BFSInteractiveScreen(navController: NavHostController) {
             .padding(12.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-
         item {
             Row(
                 modifier = Modifier
@@ -77,7 +83,7 @@ fun BFSInteractiveScreen(navController: NavHostController) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Button(onClick = {navController.popBackStack()}) {
+                Button(onClick = { navController.popBackStack() }) {
                     Text("Back")
                 }
                 Text(
@@ -89,15 +95,30 @@ fun BFSInteractiveScreen(navController: NavHostController) {
             }
         }
 
-        // EDGE INPUT
+        item {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Directed Graph?")
+                Spacer(Modifier.width(8.dp))
+                Switch(
+                    checked = isDirected,
+                    onCheckedChange = { isDirected = it }
+                )
+                Spacer(Modifier.width(16.dp))
+                Text(if (isDirected) "(Directed)" else "(Undirected)")
+            }
+        }
+
         item {
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp)
             ) {
                 Column(Modifier.padding(16.dp)) {
-
-                    // Hai ô nhập u – v và nút Add
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         OutlinedTextField(
                             value = uInput,
@@ -128,7 +149,6 @@ fun BFSInteractiveScreen(navController: NavHostController) {
                         }) { Text("Add") }
                     }
 
-                    // Danh sách cạnh
                     if (edges.isNotEmpty()) {
                         Spacer(Modifier.height(8.dp))
                         Text(
@@ -139,13 +159,14 @@ fun BFSInteractiveScreen(navController: NavHostController) {
                         TextButton(onClick = {
                             edges.clear()
                             bfsResult = emptyList()
+                            queueStates = emptyList()
+                            currentStepIdx = -1
                         }) { Text("Clear edges") }
                     }
                 }
             }
         }
 
-        // START NODE + RUN BFS
         item {
             Spacer(Modifier.height(12.dp))
             Card(
@@ -164,19 +185,19 @@ fun BFSInteractiveScreen(navController: NavHostController) {
                         Spacer(Modifier.width(8.dp))
                         Button(onClick = {
                             val start = startInput.toIntOrNull() ?: return@Button
-                            // Build thuật toán và chạy BFS
-                            val algo = BFSAlgorithm().apply {
+                            val algo = BFSAlgorithm(isDirected = isDirected).apply {
                                 edges.forEach { (u, v) -> addEdge(u, v) }
                             }
-                            bfsResult = algo.bfs(start)
-                            currentStepIdx = -1         // chuẩn bị cho mô phỏng mới
+                            val (result, states) = algo.bfs(start)
+                            bfsResult = result
+                            queueStates = states
+                            currentStepIdx = -1
                         }) { Text("Run BFS") }
                     }
                 }
             }
         }
 
-        // kết quả
         if (bfsResult.isNotEmpty()) {
             item {
                 Spacer(Modifier.height(12.dp))
@@ -189,10 +210,21 @@ fun BFSInteractiveScreen(navController: NavHostController) {
                     Column(Modifier.padding(16.dp)) {
                         Text("Traversal order:", fontWeight = FontWeight.Medium)
                         Text(
-                            bfsResult.joinToString(" → "),
+                            if (currentStepIdx >= 0) {
+                                bfsResult.take(currentStepIdx + 1).joinToString(" → ")
+                            } else {
+                                "None"
+                            },
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Text("Queue at step ${currentStepIdx + 1}:", fontWeight = FontWeight.Medium)
+                        Text(
+                            queueStates.getOrNull(currentStepIdx + 1)?.joinToString(", ") ?: "Empty",
+                            fontSize = 16.sp,
+                            color = MaterialTheme.colorScheme.secondary
                         )
                     }
                 }
@@ -200,27 +232,49 @@ fun BFSInteractiveScreen(navController: NavHostController) {
 
             item {
                 Spacer(Modifier.height(8.dp))
-                Button(
-                    onClick = {
-                        if (currentStepIdx >= bfsResult.lastIndex) {
-                            // Hết ─> reset
-                            currentStepIdx = -1
-                        } else {
-                            currentStepIdx += 1
-                        }
-                    }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
-                    Text(if (currentStepIdx >= bfsResult.lastIndex) "Reset" else "Next step")
+                    // Nút Previous
+                    Button(
+                        onClick = {
+                            if (currentStepIdx > -1) {
+                                currentStepIdx -= 1
+                            }
+                        },
+                        enabled = currentStepIdx > -1
+                    ) {
+                        Text("Previous")
+                    }
+
+                    // Nút Next
+                    Button(
+                        onClick = {
+                            if (currentStepIdx < bfsResult.lastIndex) {
+                                currentStepIdx += 1
+                            }
+                        },
+                        enabled = currentStepIdx < bfsResult.lastIndex
+                    ) {
+                        Text("Next")
+                    }
+
+                    // Nút Reset
+                    Button(
+                        onClick = {
+                            currentStepIdx = -1
+                        }
+                    ) {
+                        Text("Reset")
+                    }
                 }
             }
         }
 
-        // vẽ đồ thị
         if (edges.isNotEmpty()) {
             item {
                 Spacer(Modifier.height(12.dp))
-
-                // Tính vị trí node trên đường tròn đơn giản
                 val maxNode = edges.flatMap { listOf(it.first, it.second) }.maxOrNull() ?: 0
                 val nodePositions by remember(maxNode) {
                     mutableStateOf(
@@ -241,22 +295,23 @@ fun BFSInteractiveScreen(navController: NavHostController) {
                     edges = edges.sortedBy { it.first },
                     nodePositions = nodePositions,
                     nodeCount = nodePositions.size,
-                    visited       = bfsResult.take(currentStepIdx.coerceAtLeast(0)).toSet(),
-                    current       = bfsResult.getOrNull(currentStepIdx)
+                    visited = bfsResult.take(currentStepIdx.coerceAtLeast(0)).toSet(),
+                    current = bfsResult.getOrNull(currentStepIdx),
+                    isDirected = isDirected
                 )
             }
         }
     }
 }
 
-//vẽ đồ thị
 @Composable
 fun GraphVisualizer(
     edges: List<Pair<Int, Int>>,
     nodePositions: List<Offset>,
     nodeCount: Int,
     visited: Set<Int>,
-    current: Int?
+    current: Int?,
+    isDirected: Boolean
 ) {
     val radius = 40f
     Canvas(
@@ -277,11 +332,11 @@ fun GraphVisualizer(
 
         // Vẽ node
         nodePositions.take(nodeCount).forEachIndexed { idx, pos ->
-            val nodeId      = idx + 1
+            val nodeId = idx + 1
             val fillColor = when {
-                nodeId == current -> Color.Red            // đang xử lý
-                nodeId in visited  -> Color(0xFF4CAF50)   // đã thăm (xanh lá)
-                else               -> Color.Cyan          // chưa thăm
+                nodeId == current -> Color.Red
+                nodeId in visited -> Color(0xFF4CAF50)
+                else -> Color.Cyan
             }
 
             drawCircle(color = fillColor, center = pos, radius = radius)
@@ -291,7 +346,7 @@ fun GraphVisualizer(
                 pos.x,
                 pos.y + 12f,
                 android.graphics.Paint().apply {
-                    textSize  = 40f
+                    textSize = 40f
                     isFakeBoldText = true
                     textAlign = android.graphics.Paint.Align.CENTER
                 }

@@ -170,7 +170,7 @@ fun addGraphFun(navController: NavHostController) {
             if (listNode.size > 1 && onSubmitted) {
                 when (selection) {
                     "bfs" -> {
-
+                        navController.navigate("bfs")
                     }
                     "dfs" -> {
                         println("dfs dc goi")

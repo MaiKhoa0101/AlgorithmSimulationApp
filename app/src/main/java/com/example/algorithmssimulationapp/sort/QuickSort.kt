@@ -53,6 +53,9 @@ fun generateQuickSortSteps(array: List<Int>): List<Pair<SortStep, List<Int>>> {
             val pivotIndex = (left + right) / 2
             val pivotValue = workingArray[pivotIndex]
             steps.add(SortStep.SetPivot(pivotIndex, pivotValue, left, right) to workingArray.toList())
+            println("steps $steps")
+            println("pivot value $pivotValue")
+            println("working arr "+ workingArray.toList())
 
             // Khởi tạo con trỏ
             var i = left
@@ -138,6 +141,98 @@ fun parseArrayInput(input: String): List<Int>? {
     }
 }
 
+// Hàm tạo trạng thái từ bước
+fun createVisualizationState(step: SortStep, array: List<Int>, baseState: VisualizationState): VisualizationState {
+    return when (step) {
+        is SortStep.SetPivot -> {
+            baseState.copy(
+                array = array.toMutableList(),
+                pivotIndex = step.pivotIndex,
+                pivotValue = step.pivotValue,
+                leftPointer = -1,
+                rightPointer = -1,
+                swapIndices = null,
+                currentRange = step.left to step.right,
+                message = "Chọn pivot = ${step.pivotValue} tại vị trí giữa ${step.pivotIndex} cho vùng [${step.left}, ${step.right}]"
+            )
+        }
+        is SortStep.InitPointers -> {
+            baseState.copy(
+                array = array.toMutableList(),
+                leftPointer = step.leftPointer,
+                rightPointer = step.rightPointer,
+                message = "Khởi tạo con trỏ: i = ${step.leftPointer}, j = ${step.rightPointer}"
+            )
+        }
+        is SortStep.MoveLeftPointer -> {
+            baseState.copy(
+                array = array.toMutableList(),
+                leftPointer = step.to,
+                message = "Di chuyển con trỏ i từ ${step.from} đến ${step.to}. Tìm phần tử >= pivot (${step.pivotValue}): ${step.value}"
+            )
+        }
+        is SortStep.MoveRightPointer -> {
+            baseState.copy(
+                array = array.toMutableList(),
+                rightPointer = step.to,
+                message = "Di chuyển con trỏ j từ ${step.from} đến ${step.to}. Tìm phần tử <= pivot (${step.pivotValue}): ${step.value}"
+            )
+        }
+        is SortStep.CheckSwapCondition -> {
+            baseState.copy(
+                array = array.toMutableList(),
+                message = "Kiểm tra i <= j: ${step.leftIndex} <= ${step.rightIndex} = ${step.willSwap}. " +
+                        if (step.willSwap) "Sẽ hoán đổi ${step.leftValue} và ${step.rightValue}" else "Dừng partition"
+            )
+        }
+        is SortStep.Swap -> {
+            baseState.copy(
+                array = array.toMutableList(),
+                swapIndices = step.leftIndex to step.rightIndex,
+                message = "Hoán đổi a[${step.leftIndex}] = ${step.leftValue} với a[${step.rightIndex}] = ${step.rightValue}"
+            )
+        }
+        is SortStep.UpdatePointers -> {
+            baseState.copy(
+                array = array.toMutableList(),
+                leftPointer = step.newLeft,
+                rightPointer = step.newRight,
+                swapIndices = null,
+                message = "Cập nhật con trỏ: i++ = ${step.newLeft}, j-- = ${step.newRight}"
+            )
+        }
+        is SortStep.PartitionComplete -> {
+            baseState.copy(
+                array = array.toMutableList(),
+                leftPointer = -1,
+                rightPointer = -1,
+                swapIndices = null,
+                message = "Partition hoàn thành! i = ${step.finalLeft}, j = ${step.finalRight}"
+            )
+        }
+        is SortStep.RecursiveCall -> {
+            baseState.copy(
+                array = array.toMutableList(),
+                currentRange = step.left to step.right,
+                message = "Gọi đệ quy cho mảng con bên ${step.side}: [${step.left}, ${step.right}]"
+            )
+        }
+        is SortStep.Done -> {
+            baseState.copy(
+                array = array.toMutableList(),
+                pivotIndex = -1,
+                pivotValue = -1,
+                leftPointer = -1,
+                rightPointer = -1,
+                swapIndices = null,
+                completedIndices = array.indices.toSet(),
+                currentRange = null,
+                message = "QuickSort hoàn thành! Mảng đã được sắp xếp."
+            )
+        }
+    }
+}
+
 // Màn hình chính
 @Composable
 fun QuickSortStepScreen(navController: NavHostController) {
@@ -187,6 +282,33 @@ fun QuickSortStepScreen(navController: NavHostController) {
             array = currentArray.toMutableList(),
             message = "Đã reset. Thay đổi mảng hoặc nhấn 'Bắt đầu' để mô phỏng lại"
         )
+    }
+
+    // Hàm đi tới bước tiếp theo
+    val nextStep = {
+        if (stepIndex < steps.size) {
+            val (step, newArray) = steps[stepIndex]
+            visualState = createVisualizationState(step, newArray, visualState)
+            stepIndex++
+        }
+    }
+
+    // Hàm lùi về bước trước
+    val previousStep = {
+        if (stepIndex > 0) {
+            stepIndex--
+            if (stepIndex == 0) {
+                // Về trạng thái ban đầu
+                visualState = VisualizationState(
+                    array = currentArray.toMutableList(),
+                    message = "Nhấn 'Bước tiếp theo' để bắt đầu QuickSort với Hoare Partition"
+                )
+            } else {
+                // Lấy trạng thái của bước trước
+                val (step, newArray) = steps[stepIndex - 1]
+                visualState = createVisualizationState(step, newArray, visualState)
+            }
+        }
     }
 
     Column(
@@ -423,97 +545,21 @@ fun QuickSortStepScreen(navController: NavHostController) {
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             if (isSimulationStarted) {
+                // Nút Bước trước
                 Button(
-                    onClick = {
-                        if (stepIndex < steps.size) {
-                            val (step, newArray) = steps[stepIndex]
-                            visualState.array.clear()
-                            visualState.array.addAll(newArray)
+                    onClick = previousStep,
+                    enabled = stepIndex > 0,
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3))
+                ) {
+                    Text("← Bước trước")
+                }
 
-                            visualState = when (step) {
-                                is SortStep.SetPivot -> {
-                                    visualState.copy(
-                                        pivotIndex = step.pivotIndex,
-                                        pivotValue = step.pivotValue,
-                                        leftPointer = -1,
-                                        rightPointer = -1,
-                                        swapIndices = null,
-                                        currentRange = step.left to step.right,
-                                        message = "Chọn pivot = ${step.pivotValue} tại vị trí giữa ${step.pivotIndex} cho vùng [${step.left}, ${step.right}]"
-                                    )
-                                }
-                                is SortStep.InitPointers -> {
-                                    visualState.copy(
-                                        leftPointer = step.leftPointer,
-                                        rightPointer = step.rightPointer,
-                                        message = "Khởi tạo con trỏ: i = ${step.leftPointer}, j = ${step.rightPointer}"
-                                    )
-                                }
-                                is SortStep.MoveLeftPointer -> {
-                                    visualState.copy(
-                                        leftPointer = step.to,
-                                        message = "Di chuyển con trỏ i từ ${step.from} đến ${step.to}. Tìm phần tử >= pivot (${step.pivotValue}): ${step.value}"
-                                    )
-                                }
-                                is SortStep.MoveRightPointer -> {
-                                    visualState.copy(
-                                        rightPointer = step.to,
-                                        message = "Di chuyển con trỏ j từ ${step.from} đến ${step.to}. Tìm phần tử <= pivot (${step.pivotValue}): ${step.value}"
-                                    )
-                                }
-                                is SortStep.CheckSwapCondition -> {
-                                    visualState.copy(
-                                        message = "Kiểm tra i <= j: ${step.leftIndex} <= ${step.rightIndex} = ${step.willSwap}. " +
-                                                if (step.willSwap) "Sẽ hoán đổi ${step.leftValue} và ${step.rightValue}" else "Dừng partition"
-                                    )
-                                }
-                                is SortStep.Swap -> {
-                                    visualState.copy(
-                                        swapIndices = step.leftIndex to step.rightIndex,
-                                        message = "Hoán đổi a[${step.leftIndex}] = ${step.leftValue} với a[${step.rightIndex}] = ${step.rightValue}"
-                                    )
-                                }
-                                is SortStep.UpdatePointers -> {
-                                    visualState.copy(
-                                        leftPointer = step.newLeft,
-                                        rightPointer = step.newRight,
-                                        swapIndices = null,
-                                        message = "Cập nhật con trỏ: i++ = ${step.newLeft}, j-- = ${step.newRight}"
-                                    )
-                                }
-                                is SortStep.PartitionComplete -> {
-                                    visualState.copy(
-                                        leftPointer = -1,
-                                        rightPointer = -1,
-                                        swapIndices = null,
-                                        message = "Partition hoàn thành! i = ${step.finalLeft}, j = ${step.finalRight}"
-                                    )
-                                }
-                                is SortStep.RecursiveCall -> {
-                                    visualState.copy(
-                                        currentRange = step.left to step.right,
-                                        message = "Gọi đệ quy cho mảng con bên ${step.side}: [${step.left}, ${step.right}]"
-                                    )
-                                }
-                                is SortStep.Done -> {
-                                    visualState.copy(
-                                        pivotIndex = -1,
-                                        pivotValue = -1,
-                                        leftPointer = -1,
-                                        rightPointer = -1,
-                                        swapIndices = null,
-                                        completedIndices = visualState.array.indices.toSet(),
-                                        currentRange = null,
-                                        message = "QuickSort hoàn thành! Mảng đã được sắp xếp."
-                                    )
-                                }
-                            }
-                            stepIndex++
-                        }
-                    },
+                // Nút Bước tiếp theo
+                Button(
+                    onClick = nextStep,
                     enabled = stepIndex < steps.size
                 ) {
-                    Text("Bước tiếp theo (${stepIndex + 1}/${steps.size})")
+                    Text("Bước tiếp theo →")
                 }
             }
 
@@ -523,6 +569,15 @@ fun QuickSortStepScreen(navController: NavHostController) {
             ) {
                 Text("Reset")
             }
+        }
+
+        // Hiển thị thông tin bước hiện tại
+        if (isSimulationStarted) {
+            Text(
+                text = "Bước ${stepIndex}/${steps.size}",
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(top = 8.dp)
+            )
         }
 
         if (isSimulationStarted && stepIndex >= steps.size) {
