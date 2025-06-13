@@ -43,8 +43,6 @@ class MainActivity : ComponentActivity() {
                 composable("search") {
                     SearchScreen(navHostController)
                 }
-                composable("dfs") {
-                }
                 composable("bfs") {
                     BFSInteractiveScreen(navHostController)
                 }
@@ -57,7 +55,6 @@ class MainActivity : ComponentActivity() {
 }
     @Composable
     fun UIChoose(navHostController: NavHostController) {
-
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -79,18 +76,12 @@ class MainActivity : ComponentActivity() {
             Text("Search", fontWeight = FontWeight.Bold, fontSize = 30.sp)
             Button(
                 onClick = {
-                    navHostController.navigate("bfs")
+                    navHostController.navigate("search")
                 }
             ) {
-                Text("BFS")
+                Text("Search DFS and BFS")
             }
-            Button(
-                onClick = {
-                    navHostController.navigate("dfs")
-                }
-            ) {
-                Text("DFS")
-            }
+
         }
     }
 
