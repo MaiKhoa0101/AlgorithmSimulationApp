@@ -12,16 +12,24 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import com.example.algorithmssimulationapp.showList
 import com.example.algorithmssimulationapp.showStepMerge
+import com.example.algorithmssimulationapp.showStepNormalMerge
 import kotlinx.coroutines.delay
 import kotlin.collections.mutableListOf
 
-// Data class để lưu thông tin về mỗi step
-data class MergeStep(
-    val runs: MutableList<List<Int>>,
-    val comparingIndices: List<CompareInfo> = emptyList(),
-    val stepType: StepType = StepType.DISPLAY_RUNS
-)
 
+// Data class để lưu thông tin về mỗi step (cho cả normal và natural merge sort)
+data class MergeStep(
+    val runs: MutableList<List<Int>> = mutableListOf(),
+    val comparingIndices: List<CompareInfo> = emptyList(),
+    val stepType: StepType = StepType.DISPLAY_RUNS,
+    // Thêm fields cho normal merge sort
+    val leftArray: List<Int> = emptyList(),
+    val rightArray: List<Int> = emptyList(),
+    val resultArray: List<Int> = emptyList(),
+    val leftIndex: Int = -1,
+    val rightIndex: Int = -1,
+    val description: String = ""
+)
 data class CompareInfo(
     val leftRunIndex: Int,  // Index của run bên trái
     val rightRunIndex: Int, // Index của run bên phải
@@ -33,7 +41,12 @@ enum class StepType {
     SPLIT,
     DISPLAY_RUNS,
     COMPARING,
-    MERGE_COMPLETE
+    MERGE_COMPLETE,
+
+    // Thêm cho normal merge sort
+    DIVIDE,          // Chia mảng
+    MERGE_ARRAYS,    // Merge 2 mảng con
+    MERGE_STEP       // Từng bước merge
 }
 
 @Composable
@@ -49,7 +62,14 @@ fun showMergeSort(originArr: MutableList<Int>, option:String){
         when (option) {
             "normalmergesort" -> {
                 sortedList.clear()
-                sortedList.addAll(mergeSort(originArr))
+                sortedList.addAll(
+                    mergeSortWithTracking (
+                        originArr,
+                        addStepList = { step ->
+                            stepList.add(step)
+                        }
+                    )
+                )
             }
 
             "naturalmergesort" -> {
@@ -70,46 +90,131 @@ fun showMergeSort(originArr: MutableList<Int>, option:String){
     if (done == true) {
         println("stepList: "+stepList)
         showList(sortedList, "Mảng sau khi sắp xếp")
-        showStepMerge(stepList)
+        if (option == "normalmergesort") {
+            showStepNormalMerge(stepList)
+        } else {
+            showStepMerge(stepList)
+        }
     }
 }
-
-fun mergeSort(arr: MutableList<Int>): List<Int> {
+// Normal Merge Sort với tracking
+fun mergeSortWithTracking(
+    arr: MutableList<Int>,
+    addStepList: (MergeStep) -> Unit,
+    depth: Int = 0
+): List<Int> {
     if (arr.size <= 1) {
         return arr
     }
+
+    // Hiển thị bước chia mảng
+    addStepList(MergeStep(
+        stepType = StepType.DIVIDE,
+        leftArray = arr,
+        description = "Chia mảng: " +arr.toList()
+    ))
+
     println(arr)
     val middle = arr.size / 2
-    val left = mergeSort(arr.subList(0, middle).toMutableList())
-    val right = mergeSort(arr.subList(middle, arr.size).toMutableList())
-    val result = merge(left, right)
+    val leftArr = arr.subList(0, middle).toMutableList()
+    val rightArr = arr.subList(middle, arr.size).toMutableList()
+
+    val left = mergeSortWithTracking(leftArr, addStepList, depth + 1)
+    val right = mergeSortWithTracking(rightArr, addStepList, depth + 1)
+
+    // Hiển thị bước chuẩn bị merge
+    addStepList(MergeStep(
+        stepType = StepType.MERGE_ARRAYS,
+        leftArray = left,
+        rightArray = right,
+        description = "Chuẩn bị merge: ${left} và ${right}"
+    ))
+
+    val result = mergeWithTracking(left, right, addStepList)
     return result
 }
 
-fun merge(left: List<Int>, right: List<Int>): MutableList<Int> {
+fun mergeWithTracking(
+    left: List<Int>,
+    right: List<Int>,
+    addStepList: (MergeStep) -> Unit
+): MutableList<Int> {
     val result = mutableListOf<Int>()
     var i = 0
     var j = 0
 
     while (i < left.size && j < right.size) {
+        // Tạo step để show đang so sánh
+        addStepList(MergeStep(
+            stepType = StepType.MERGE_STEP,
+            leftArray = left,
+            rightArray = right,
+            resultArray = result.toList(),
+            leftIndex = i,
+            rightIndex = j,
+            description = "So sánh ${left[i]} và ${right[j]}"
+        ))
+
         if (left[i] <= right[j]) {
             result.add(left[i])
             i++
             println("result add left: "+result)
-
         } else {
             result.add(right[j])
             j++
             println("result add right: "+result)
         }
+
+        // Show result sau khi add
+        addStepList(MergeStep(
+            stepType = StepType.MERGE_STEP,
+            leftArray = left,
+            rightArray = right,
+            resultArray = result.toList(),
+            leftIndex = i,
+            rightIndex = j,
+            description = "Kết quả: ${result}"
+        ))
+
         println("Sum result: "+result)
     }
-    for(u in i..left.size-1){
+
+    // Thêm phần tử còn lại từ left
+    for(u in i until left.size){
         result.add(left[u])
+        addStepList(MergeStep(
+            stepType = StepType.MERGE_STEP,
+            leftArray = left,
+            rightArray = right,
+            resultArray = result.toList(),
+            leftIndex = u + 1,
+            rightIndex = j,
+            description = "Thêm phần tử còn lại từ mảng trái: ${left[u]}"
+        ))
     }
-    for(j in j..right.size-1){
-        result.add(right[j])
+
+    // Thêm phần tử còn lại từ right
+    for(k in j until right.size){
+        result.add(right[k])
+        addStepList(MergeStep(
+            stepType = StepType.MERGE_STEP,
+            leftArray = left,
+            rightArray = right,
+            resultArray = result.toList(),
+            leftIndex = i,
+            rightIndex = k + 1,
+            description = "Thêm phần tử còn lại từ mảng phải: ${right[k]}"
+        ))
     }
+
+    // Hiển thị kết quả cuối cùng của merge
+    addStepList(MergeStep(
+        stepType = StepType.MERGE_COMPLETE,
+        leftArray = left,
+        rightArray = right,
+        resultArray = result.toList(),
+        description = "Hoàn thành merge: ${result}"
+    ))
 
     return result
 }
@@ -139,16 +244,13 @@ fun mergeSortRuns(
                 currentRun.add(mergedRun)
                 index += 2
                 // Hiển thị kết quả sau mỗi vòng merge
-                addStepList(MergeStep(currentRun, emptyList(), StepType.MERGE_COMPLETE))
             } else {
                 currentRun.add(runs[index])
                 index++
             }
         }
         runs = currentRun
-        // Hiển thị kết quả sau mỗi vòng merge
-        addStepList(MergeStep(runs, emptyList(), StepType.MERGE_COMPLETE))
-
+        addStepList(MergeStep(currentRun, emptyList(), StepType.MERGE_COMPLETE))
     }
 
     result = runs[0].toMutableList()

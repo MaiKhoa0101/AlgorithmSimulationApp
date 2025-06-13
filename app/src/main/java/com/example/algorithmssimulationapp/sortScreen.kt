@@ -34,6 +34,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -43,11 +44,7 @@ import com.example.algorithmssimulationapp.sort.MergeStep
 import com.example.algorithmssimulationapp.sort.StepType
 import com.example.algorithmssimulationapp.sort.showMergeSort
 import com.example.algorithmssimulationapp.sort.showQuickSort
-import kotlin.compareTo
-import kotlin.dec
-import kotlin.inc
 import kotlin.random.Random
-import kotlin.text.iterator
 
 @Composable
 fun SortScreen(navHostController: NavHostController){
@@ -237,6 +234,9 @@ fun showStepMerge(stepList: MutableList<MergeStep>) {
                 StepType.DISPLAY_RUNS -> "Runs hiện tại"
                 StepType.COMPARING -> "Đang so sánh"
                 StepType.MERGE_COMPLETE -> "Hoàn thành merge"
+                StepType.DIVIDE -> TODO()
+                StepType.MERGE_ARRAYS -> TODO()
+                StepType.MERGE_STEP -> TODO()
             },
             fontSize = 16.sp,
             fontWeight = FontWeight.Bold,
@@ -304,6 +304,286 @@ fun showStepMerge(stepList: MutableList<MergeStep>) {
                     color = Color.Green,
                     fontWeight = FontWeight.Bold
                 )
+            }
+        }
+    }
+}
+@Composable
+fun showStepNormalMerge(stepList: MutableList<MergeStep>) {
+    var i = remember { mutableIntStateOf(0) }
+
+    Spacer(modifier = Modifier.height(30.dp))
+    HorizontalDivider(color = Color.White, thickness = 2.dp)
+    Spacer(modifier = Modifier.height(10.dp))
+
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text("Các bước Normal Merge Sort", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.height(10.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceAround,
+            verticalAlignment = Alignment.Bottom
+        ) {
+            OnclickButton(
+                modifier = Modifier.height(40.dp),
+                "Quay lại",
+                onClick = {
+                    if (i.value > 0) {
+                        i.value--
+                    }
+                }
+            )
+            OnclickButton(
+                modifier = Modifier.height(40.dp),
+                "Tiến lên",
+                onClick = {
+                    if (i.value < stepList.size - 1) {
+                        i.value++
+                    }
+                }
+            )
+        }
+
+        Spacer(modifier = Modifier.height(30.dp))
+        HorizontalDivider(color = Color.White, thickness = 2.dp)
+        Spacer(modifier = Modifier.height(30.dp))
+
+        val currentStep = stepList[i.value]
+
+        // Hiển thị loại step hiện tại
+        Text(
+            when (currentStep.stepType) {
+                StepType.DIVIDE -> "Chia mảng"
+                StepType.MERGE_ARRAYS -> "Chuẩn bị merge"
+                StepType.MERGE_STEP -> "Đang merge"
+                StepType.MERGE_COMPLETE -> "Hoàn thành merge"
+                else -> "Bước thực hiện"
+            },
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color.Blue
+        )
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        // Hiển thị mô tả chi tiết
+        if (currentStep.description.isNotEmpty()) {
+            Text(
+                currentStep.description,
+                fontSize = 14.sp,
+                color = Color.Green,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center
+            )
+            Spacer(modifier = Modifier.height(15.dp))
+        }
+
+        // Hiển thị theo từng loại step
+        when (currentStep.stepType) {
+            StepType.DIVIDE -> {
+                // Hiển thị mảng cần chia
+                showNormalMergeArray(currentStep.leftArray, "Mảng cần chia")
+            }
+
+            StepType.MERGE_ARRAYS -> {
+                // Hiển thị 2 mảng con chuẩn bị merge
+                showNormalMergeArray(currentStep.leftArray, "Mảng trái")
+                Spacer(modifier = Modifier.height(15.dp))
+                showNormalMergeArray(currentStep.rightArray, "Mảng phải")
+            }
+
+            StepType.MERGE_STEP -> {
+                // Hiển thị quá trình merge với highlighting
+                showMergeProcess(currentStep)
+            }
+
+            StepType.MERGE_COMPLETE -> {
+                // Hiển thị kết quả cuối cùng
+                showNormalMergeArray(currentStep.leftArray, "Mảng trái")
+                Spacer(modifier = Modifier.height(10.dp))
+                showNormalMergeArray(currentStep.rightArray, "Mảng phải")
+                Spacer(modifier = Modifier.height(10.dp))
+                showNormalMergeArray(currentStep.resultArray, "Kết quả merge", Color(0xFF00ac35))
+            }
+
+            else -> {
+                // Default case
+                if (currentStep.leftArray.isNotEmpty()) {
+                    showNormalMergeArray(currentStep.leftArray, "Mảng")
+                }
+            }
+        }
+
+//        // Hiển thị thông tin so sánh nếu có
+//        if (currentStep.leftIndex >= 0 && currentStep.rightIndex >= 0 &&
+//            currentStep.stepType == StepType.MERGE_STEP) {
+//            Spacer(modifier = Modifier.height(20.dp))
+//            if (currentStep.leftIndex < currentStep.leftArray.size &&
+//                currentStep.rightIndex < currentStep.rightArray.size) {
+//                Text(
+//                    "So sánh: ${currentStep.leftArray[currentStep.leftIndex]} " +
+//                            "với ${currentStep.rightArray[currentStep.rightIndex]}",
+//                    fontSize = 14.sp,
+//                    color = Color.Magenta,
+//                    fontWeight = FontWeight.Bold
+//                )
+//            }
+//        }
+    }
+}
+
+@Composable
+fun showNormalMergeArray(
+    array: List<Int>,
+    title: String,
+    baseColor: Color = Color.Red
+) {
+    if (array.isEmpty()) return
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(title, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.height(5.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.Bottom
+        ) {
+            array.forEach { value ->
+                Column(
+                    modifier = Modifier
+                        .height((2 * value + 20).dp)
+                        .width(40.dp)
+                        .background(baseColor)
+                        .border(2.dp, Color.Black),
+                    verticalArrangement = Arrangement.Bottom
+                ) {
+                    Text(
+                        value.toString(),
+                        modifier = Modifier.align(Alignment.CenterHorizontally),
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp
+                    )
+                }
+                Spacer(modifier = Modifier.width(4.dp))
+            }
+        }
+    }
+}
+
+@Composable
+fun showMergeProcess(step: MergeStep) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        // Hiển thị mảng trái với highlighting
+        Text("Mảng trái:", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.height(5.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.Bottom
+        ) {
+            step.leftArray.forEachIndexed { index, value ->
+                val backgroundColor = when {
+                    index == step.leftIndex -> Color(0xFF00ff10) // Element đang được xét
+                    index < step.leftIndex -> Color.Gray   // Element đã được xử lý
+                    else -> Color.Red                      // Element chưa xử lý
+                }
+
+                Column(
+                    modifier = Modifier
+                        .height((2 * value + 20).dp)
+                        .width(40.dp)
+                        .background(backgroundColor)
+                        .border(2.dp, Color.Black),
+                    verticalArrangement = Arrangement.Bottom
+                ) {
+                    Text(
+                        value.toString(),
+                        modifier = Modifier.align(Alignment.CenterHorizontally),
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp
+                    )
+                }
+                Spacer(modifier = Modifier.width(4.dp))
+            }
+        }
+
+        Spacer(modifier = Modifier.height(15.dp))
+
+        // Hiển thị mảng phải với highlighting
+        Text("Mảng phải:", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.height(5.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.Bottom
+        ) {
+            step.rightArray.forEachIndexed { index, value ->
+                val backgroundColor = when {
+                    index == step.rightIndex -> Color.Blue // Element đang được xét
+                    index < step.rightIndex -> Color.Gray  // Element đã được xử lý
+                    else -> Color.Red                      // Element chưa xử lý
+                }
+
+                Column(
+                    modifier = Modifier
+                        .height((2 * value + 20).dp)
+                        .width(40.dp)
+                        .background(backgroundColor)
+                        .border(2.dp, Color.Black),
+                    verticalArrangement = Arrangement.Bottom
+                ) {
+                    Text(
+                        value.toString(),
+                        modifier = Modifier.align(Alignment.CenterHorizontally),
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp
+                    )
+                }
+                Spacer(modifier = Modifier.width(4.dp))
+            }
+        }
+
+        Spacer(modifier = Modifier.height(15.dp))
+
+        // Hiển thị mảng kết quả
+        if (step.resultArray.isNotEmpty()) {
+            Text("Kết quả:", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.height(5.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.Bottom
+            ) {
+                step.resultArray.forEach { value ->
+                    Column(
+                        modifier = Modifier
+                            .height((2 * value + 20).dp)
+                            .width(40.dp)
+                            .background(Color.Magenta)
+                            .border(2.dp, Color.Black),
+                        verticalArrangement = Arrangement.Bottom
+                    ) {
+                        Text(
+                            value.toString(),
+                            modifier = Modifier.align(Alignment.CenterHorizontally),
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(4.dp))
+                }
             }
         }
     }

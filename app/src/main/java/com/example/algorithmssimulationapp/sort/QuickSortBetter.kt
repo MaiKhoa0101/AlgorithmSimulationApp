@@ -18,10 +18,6 @@ fun showQuickSort(arr: MutableList<Int>, option:String) {
     LaunchedEffect(option) {
         println("option: " + option)
         when (option) {
-            "normalquicksort" -> {
-                sortedList.clear()
-                sortedList.addAll(mergeSort(arr))
-            }
 
             "betterquicksort" -> {
                 sortedList.clear()
