@@ -81,42 +81,48 @@ fun SearchScreen(navHostController: NavHostController){
 fun addGraphFun(navController: NavHostController) {
     var onSubmitted by remember { mutableStateOf(false) }
     var selection by remember { mutableStateOf("") }
-    val listNode = remember { mutableMapOf<Node, MutableList<Int>>() }
+    var listNode = remember { mutableStateMapOf<Node, MutableList<Int>>() }
     var reset by remember { mutableStateOf(false) }
-
     LaunchedEffect(reset) {
-        listNode.clear()
-        val max = Random.nextInt(4, 7)
+        var templistNode = mutableMapOf<Node, MutableList<Int>>()
+        if (reset == true) {
+            listNode.clear()
+            val max = Random.nextInt(4, 7)
 
-        // Tạo sẵn tất cả node
-        val nodes = (1..max).map { Node(it.toString()) }
-        nodes.forEach { listNode[it] = mutableListOf() }
-        println("listNode sau khi bi xoa la: $listNode")
+            // Tạo sẵn tất cả node
+            val nodes = (1..max).map { Node(it.toString()) }
+            nodes.forEach { templistNode[it] = mutableListOf() }
+            println("listNode sau khi bi xoa la: $templistNode")
 
-        for (i in nodes.indices) {
-            val nodeA = nodes[i]
-            val edgeCount = Random.nextInt(1, 2) // mỗi node có 1–2 cạnh
-            val neighbors = mutableSetOf<Int>()
+            for (i in nodes.indices) {
+                val nodeA = nodes[i]
+                val edgeCount = Random.nextInt(1, 2) // mỗi node có 1–2 cạnh
+                val neighbors = mutableSetOf<Int>()
 
-            while (neighbors.size < edgeCount) {
-                val randomIndex = Random.nextInt(0, max)
-                if (randomIndex != i) {
-                    val nodeB = nodes[randomIndex]
+                while (neighbors.size < edgeCount) {
+                    val randomIndex = Random.nextInt(0, max)
+                    if (randomIndex != i) {
+                        val nodeB = nodes[randomIndex]
 
-                    // Thêm cạnh hai chiều nếu chưa tồn tại
-                    if (!listNode[nodeA]!!.contains(nodeB.name.toInt())) {
-                        listNode[nodeA]!!.add(nodeB.name.toInt())
-                        listNode[nodeB]!!.add(nodeA.name.toInt())
+                        // Thêm cạnh hai chiều nếu chưa tồn tại
+                        if (!templistNode[nodeA]!!.contains(nodeB.name.toInt())) {
+                            templistNode[nodeA]!!.add(nodeB.name.toInt())
+                            templistNode[nodeB]!!.add(nodeA.name.toInt())
+                        }
+
+                        neighbors.add(randomIndex)
                     }
-
-                    neighbors.add(randomIndex)
                 }
             }
-        }
 
-        // In ra để debug
-        listNode.forEach { (node, edges) ->
-            println("${node.name} -> $edges")
+            if (templistNode.isNotEmpty()) {
+                listNode.clear()
+                listNode.putAll(templistNode)
+            }
+            // In ra để debug
+            templistNode.forEach { (node, edges) ->
+                println("${node.name} -> $edges")
+            }
         }
     }
 
@@ -145,10 +151,6 @@ fun addGraphFun(navController: NavHostController) {
                     }
 
                 }
-            }
-
-            // Nút chọn thuật toán
-            if (!onSubmitted) {
                 Column {
                     OnclickButton(modifier, "BFS") {
                         onSubmitted = true
@@ -159,6 +161,7 @@ fun addGraphFun(navController: NavHostController) {
                         selection = "dfs"
                     }
                 }
+
                 ShowGraph(listNode)
             }
 
@@ -210,16 +213,9 @@ fun calculateNodeLevels(listNode: Map<Node, List<Int>>): Map<Int, List<Node>> {
 fun ShowGraph( listNode: MutableMap<Node, MutableList<Int>> = mutableMapOf()){
     var level = calculateNodeLevels(listNode)
     val nodePositions = remember { mutableStateMapOf<Node, Offset>() }
-    var readyToDraw by remember { mutableStateOf(false) }
 
     println("Vao dc day ne")
 
-    LaunchedEffect(nodePositions) {
-        if (nodePositions.size == listNode.size) {
-            delay(50) // Cho layout hoàn thành
-            readyToDraw = true
-        }
-    }
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -232,26 +228,23 @@ fun ShowGraph( listNode: MutableMap<Node, MutableList<Int>> = mutableMapOf()){
             Text("Chưa có đồ thị")
         }
         else{
-            if (readyToDraw) {
+            Canvas(
+                modifier = Modifier
+                    .fillMaxSize()
+            ) {
+                listNode.forEach { (fromNode, neighbors) ->
+                    val fromPosition = nodePositions[fromNode] ?: return@forEach
+                    neighbors.forEach { toId ->
+                        val toNode =
+                            listNode.keys.find { it.name == toId.toString() } ?: return@forEach
+                        val toPosition = nodePositions[toNode] ?: return@forEach
 
-                Canvas(
-                    modifier = Modifier
-                        .fillMaxSize()
-                ) {
-                    listNode.forEach { (fromNode, neighbors) ->
-                        val fromPosition = nodePositions[fromNode] ?: return@forEach
-                        neighbors.forEach { toId ->
-                            val toNode =
-                                listNode.keys.find { it.name == toId.toString() } ?: return@forEach
-                            val toPosition = nodePositions[toNode] ?: return@forEach
-
-                            drawLine(
-                                color = Color.Black,
-                                start = fromPosition,
-                                end = toPosition,
-                                strokeWidth = 5f
-                            )
-                        }
+                        drawLine(
+                            color = Color.Black,
+                            start = fromPosition,
+                            end = toPosition,
+                            strokeWidth = 5f
+                        )
                     }
                 }
             }
@@ -275,7 +268,7 @@ fun ShowGraph( listNode: MutableMap<Node, MutableList<Int>> = mutableMapOf()){
                                 modifier = Modifier
                                     .size(40.dp)
                                     .onGloballyPositioned { coordinates ->
-                                        val position = coordinates.localToWindow(Offset(10f,-580f))
+                                        val position = coordinates.localToWindow(Offset(10f, -600f))
                                         nodePositions[node] = position
                                     }
                                     .clip(CircleShape)
@@ -289,6 +282,7 @@ fun ShowGraph( listNode: MutableMap<Node, MutableList<Int>> = mutableMapOf()){
                     }
                 }
             }
+
         }
     }
 }

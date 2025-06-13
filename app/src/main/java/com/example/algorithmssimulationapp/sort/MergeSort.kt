@@ -6,6 +6,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -55,6 +56,7 @@ fun showMergeSort(originArr: MutableList<Int>, option:String){
     // Thay đổi structure để lưu thêm thông tin về index đang so sánh
     var stepList = remember { mutableStateListOf<MergeStep>() }
     var done by remember { mutableStateOf(false) }
+    var a = remember { mutableStateOf(10)}
 
     LaunchedEffect(option) {
         stepList.clear()
